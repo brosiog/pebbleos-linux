@@ -112,6 +112,7 @@ void display_set_enabled(bool enabled) {
 }
 
 void display_set_rotated(bool rotated) {
+  display_linux_bottom_set_rotated(rotated);
 }
 
 bool display_update_in_progress(void) {

@@ -31,6 +31,8 @@ static uint8_t *s_memory;
 static struct fb_fix_screeninfo s_fix;
 static struct fb_var_screeninfo s_var;
 static uint8_t *s_frame;
+static uint8_t *s_rotated_frame;
+static bool s_rotated;
 static int s_width;
 static int s_height;
 static const char *s_capture;
@@ -261,8 +263,35 @@ static void prv_log_wake_frame(void) {
   }
 }
 
+// Must hold s_lock. Rotate at scanout so app frames and idle clocks share the same orientation.
+static const uint8_t *prv_scanout_frame(const uint8_t *fb) {
+  if (!s_rotated)
+    return fb;
+  size_t pixels = (size_t)s_width * s_height;
+  if (!s_rotated_frame)
+    s_rotated_frame = malloc(pixels);
+  if (!s_rotated_frame)
+    return nullptr;
+  for (size_t i = 0; i < pixels; i++)
+    s_rotated_frame[i] = fb[pixels - 1 - i];
+  return s_rotated_frame;
+}
+
+void display_linux_bottom_set_rotated(bool rotated) {
+  pthread_mutex_lock(&s_lock);
+  if (s_rotated != rotated) {
+    s_rotated = rotated;
+    s_dirty = true;
+  }
+  pthread_mutex_unlock(&s_lock);
+  posix_host_wake();
+}
+
 // Must hold s_lock. The cached app frame stays separate from the visible ambient frame.
 static bool prv_present_frame(const uint8_t *fb) {
+  fb = prv_scanout_frame(fb);
+  if (!fb)
+    return false;
   if (s_wayland)
     return wayland_linux_update(fb, s_width, s_height);
   if (s_memory) {
@@ -313,6 +342,9 @@ void display_linux_bottom_update(const uint8_t *fb, int width, int height) {
 
 // Must hold s_lock.
 static void prv_write_frame(const char *path) {
+  const uint8_t *fb = prv_scanout_frame(prv_visible_frame());
+  if (!fb)
+    return;
   FILE *file = fopen(path, "wb");
   if (!file) {
     fprintf(stderr, "frame capture %s: %s\n", path, strerror(errno));
@@ -320,7 +352,7 @@ static void prv_write_frame(const char *path) {
   }
   fprintf(file, "P6\n%d %d\n255\n", s_width, s_height);
   for (int i = 0; i < s_width * s_height; i++) {
-    unsigned char c = prv_visible_frame()[i];
+    unsigned char c = fb[i];
     unsigned char rgb[] = {((c >> 4) & 3) * 85, ((c >> 2) & 3) * 85, (c & 3) * 85};
     fwrite(rgb, sizeof(rgb), 1, file);
   }
@@ -343,6 +375,7 @@ static void prv_exit(void) {
     close(s_fd);
   }
   free(s_frame);
+  free(s_rotated_frame);
   free(s_clock);
   free(s_previous);
   if (s_wayland)

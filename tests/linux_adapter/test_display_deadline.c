@@ -7,6 +7,7 @@ static uint64_t s_monotonic_us = 1000000;
 static struct linux_profile s_profile;
 static unsigned s_panel = PBL_ADAPTER_DISPLAY_AMBIENT_CLOCK;
 static unsigned s_commits;
+static uint8_t s_last_frame[260 * 260];
 
 #define CHECK(condition)                                                   \
   do {                                                                     \
@@ -81,9 +82,7 @@ bool wayland_linux_take_resume_redraw(void) {
 }
 
 bool wayland_linux_update(const uint8_t *pixels, int width, int height) {
-  (void)pixels;
-  (void)width;
-  (void)height;
+  memcpy(s_last_frame, pixels, (size_t)width * height);
   s_commits++;
   return true;
 }
@@ -118,6 +117,31 @@ int main(void) {
   s_panel = 0;
   prv_poll();
   CHECK(display_linux_is_interactive());
+  // Rotate the whole frame, preserving handedness and the unrotated source.
+  uint8_t app_frame[260 * 260];
+  for (size_t i = 0; i < sizeof(app_frame); i++)
+    app_frame[i] = (uint8_t)(i * 13 + i / s_width);
+  display_linux_bottom_update(app_frame, s_width, s_height);
+  CHECK(!memcmp(s_last_frame, s_frame, sizeof(s_last_frame)));
+  display_linux_bottom_set_rotated(true);
+  prv_poll();
+  for (size_t i = 0; i < sizeof(s_last_frame); i++)
+    CHECK(s_last_frame[i] == s_frame[sizeof(s_last_frame) - 1 - i]);
+  // The independent idle-clock renderer uses the same scanout rotation.
+  s_panel = PBL_ADAPTER_DISPLAY_AMBIENT_CLOCK;
+  for (int mode = 1; mode <= 2; mode++) {
+    atomic_store(&s_clock_mode, mode);
+    prv_poll();
+    for (size_t i = 0; i < sizeof(s_last_frame); i++)
+      CHECK(s_last_frame[i] == s_clock[sizeof(s_last_frame) - 1 - i]);
+  }
+  s_panel = PBL_ADAPTER_DISPLAY_ON;
+  prv_poll();
+  for (size_t i = 0; i < sizeof(s_last_frame); i++)
+    CHECK(s_last_frame[i] == s_frame[sizeof(s_last_frame) - 1 - i]);
+  display_linux_bottom_set_rotated(false);
+  prv_poll();
+  CHECK(!memcmp(s_last_frame, s_frame, sizeof(s_last_frame)));
   // fbdev follows the same adapter state and keeps app frames behind the ambient clock.
   s_wayland = false;
   s_var.xres = s_var.yres = 260;
@@ -145,13 +169,24 @@ int main(void) {
   prv_poll();
   CHECK(display_linux_is_interactive());
   CHECK(memcmp(previous, s_memory, s_fix.smem_len));
+  display_linux_bottom_update(app_frame, s_width, s_height);
+  memcpy(previous, s_memory, s_fix.smem_len);
+  display_linux_bottom_set_rotated(true);
+  prv_poll();
+  for (size_t i = 0; i < sizeof(app_frame); i++)
+    CHECK(!memcmp(s_memory + i * 4, previous + (sizeof(app_frame) - 1 - i) * 4, 4));
+  display_linux_bottom_set_rotated(false);
+  prv_poll();
+  CHECK(!memcmp(previous, s_memory, s_fix.smem_len));
   free(previous);
   free(face);
   free(s_memory);
   s_memory = NULL;
   free(s_frame);
+  free(s_rotated_frame);
   free(s_clock);
   puts("PASS  ambient clock schedules its next minute and preserves earlier wake deadlines");
   puts("PASS  fbdev follows display power and restores app frames after ambient mode");
+  puts("PASS  left hand mode rotates app frames and both idle clocks and restores normal mode");
   return 0;
 }

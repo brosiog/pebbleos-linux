@@ -163,8 +163,13 @@ static void prv_intensity_menu_push(SettingsBacklightData *data) {
 // Orientation Settings
 /////////////////////////////
 static const char *s_display_orientation_labels[] = {
+#ifdef CONFIG_LINUX_WATCH
+  i18n_noop("Off"),
+  i18n_noop("On"),
+#else
   i18n_ctx_noop("Orientation", "Default"),
   i18n_noop("Left-Handed"),
+#endif
 };
 
 static int prv_display_orientation_get_selection_index() {
@@ -179,7 +184,7 @@ static void prv_display_orientation_menu_select(OptionMenu *option_menu, int sel
     return;
   }
 
-  display_orientation_set_left(!display_orientation_is_left());
+  display_orientation_set_left(selection == 1);
   app_window_stack_remove(&option_menu->window, true /* animated */);
 }
 
@@ -189,7 +194,11 @@ static void prv_display_orientation_menu_push(SettingsDisplayData *data) {
     .select = prv_display_orientation_menu_select,
   };
 
+#ifdef CONFIG_LINUX_WATCH
+  const char *title = i18n_noop("Left Hand Mode");
+#else
   const char *title = i18n_noop("Orientation");
+#endif
   settings_option_menu_push(title, OptionMenuContentType_SingleLine, index, &callbacks,
                             ARRAY_LENGTH(s_display_orientation_labels), true,
                             s_display_orientation_labels, data);
@@ -734,7 +743,11 @@ static void prv_display_draw_row_cb(SettingsCallbacks *context, GContext *ctx,
 #endif
 #ifdef CONFIG_ORIENTATION_MANAGER
     case SettingsDisplayOrientation:
+#ifdef CONFIG_LINUX_WATCH
+      title = i18n_noop("Left Hand Mode");
+#else
       title = i18n_noop("Orientation");
+#endif
       subtitle = s_display_orientation_labels[prv_display_orientation_get_selection_index()];
       break;
 #endif

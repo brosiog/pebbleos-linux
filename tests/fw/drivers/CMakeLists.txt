@@ -47,3 +47,10 @@ pbl_clar_test(test_mic_linux
     CONFIG_DRIVER_MIC_LOG_LEVEL=0
   OVERRIDES dummy_board
 )
+
+pbl_clar_test(test_button_linux
+  SOURCES
+    drivers/button/linux/button_linux.c
+  DEFINES
+    CONFIG_SOC_POSIX=1
+)
