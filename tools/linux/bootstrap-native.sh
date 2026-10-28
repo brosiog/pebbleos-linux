@@ -8,7 +8,7 @@ git submodule update --init --depth 1 -- \
   third_party/qr_code_generator/QR-Code-generator third_party/speex/speex \
   third_party/mbedtls/mbedtls third_party/uzlib/uzlib third_party/upng/upng \
   third_party/nimble/mynewt-nimble third_party/samsa/samsa \
-  third_party/resources/iconography third_party/fff/fff
+  third_party/resources/iconography third_party/fff/fff third_party/moddable/moddable
 patch=$root/patches/nimble-linux.patch
 if [ -s "$patch" ]; then
   module=$root/third_party/nimble/mynewt-nimble
