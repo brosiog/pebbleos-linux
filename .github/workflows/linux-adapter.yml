@@ -13,3 +13,33 @@ jobs:
       - run: CC=clang sh tests/linux_adapter/run.sh
       - if: runner.os == 'Linux'
         run: CC=clang sh tests/linux_adapter/run_display_regressions.sh
+  linux-boot:
+    runs-on: ubuntu-24.04
+    container: ghcr.io/coredevices/pebbleos-docker:v10
+    steps:
+      - uses: actions/checkout@v7
+      - run: git config --system --add safe.directory "$GITHUB_WORKSPACE"
+      - run: sh tools/linux/bootstrap-native.sh
+      - run: pip install -r requirements.txt
+      - name: Build Linux runtime for the runner's CPU
+        run: |
+          cmake -S . -B build-linux -GNinja \
+            -DBOARD=native_gabbro/galaxy_watch3 \
+            -DCMAKE_TOOLCHAIN_FILE="$PWD/cmake/toolchain/host.cmake" \
+            -DCONFIG_BT_HCI_LINUX=n -DCONFIG_BT_HCI_FAKE=y
+          cmake --build build-linux --parallel 4
+      - name: Build the mock and run host checks
+        run: |
+          mkdir build-protocol
+          CC=clang BUILD_DIR="$PWD/build-protocol" sh tests/linux_adapter/run.sh
+      - name: Boot with absent, full and partial adapter support
+        run: |
+          python3 tests/linux_adapter/smoke_os.py \
+            --os-binary build-linux/pebbleos \
+            --resources build-linux/system_resources.pbpack \
+            --mock build-protocol/mock_adapter --output build-linux/smoke-results
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: linux-adapter-smoke
+          path: build-linux/smoke-results

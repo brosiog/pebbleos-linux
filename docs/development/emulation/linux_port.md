@@ -57,6 +57,15 @@ reports state. Both display backends keep the ambient clock separate from app fr
 restore the latest app frame on wake. With no adapter, the OS stays interactive and reports
 unavailable sensors and controls through the driver APIs.
 
+## Left hand mode
+
+On Galaxy Watch3, choose **Settings → Display → Left Hand Mode → On**, then turn the watch
+180 degrees so its buttons sit on the left. The whole display rotates, including apps and
+the always-on clock. In the new wearing position, the upper button remains Back and the lower
+button remains Select. Bezel Up/Down controls reverse, and touch coordinates and accelerometer
+axes follow the display orientation. The preference survives restarts; choose **Off** to restore
+the original orientation. A button held during the change keeps its original action until released.
+
 ## Tests
 
 ```sh
@@ -72,6 +81,16 @@ to Zig's `lib/libc/include/any-linux-any` directory.
 The firmware's `test_watch_sensor_linux`, `test_hrm_manager` and `test_hrm_manager_linux`
 suites cover interpolation, steps and HRM delivery. Run them through `pbl test` or the
 corresponding targets in a configured unit-test build.
+
+The `linux-adapter` CI workflow also builds the watch configuration for the Linux runner's CPU,
+with a fake Bluetooth controller, and uses `tests/linux_adapter/smoke_os.py` to boot it with
+absent, full and partial adapter support. Each case must reach the launcher, save a complete
+display frame and respect the declared capabilities. This checks the OS process; hardware
+timing and power remain separate tests.
+The `test_button_linux` and `test_touch` suites cover rotated controls, releases during an
+orientation change and touch coordinates. The display regression script also checks rotated
+app frames and both always-on clock styles. Physical wearing and control validation remains
+pending while the watch is offline.
 
 ## Before a hardware release
 
