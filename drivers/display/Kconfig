@@ -36,6 +36,12 @@ config DISPLAY_SDL
     help
       Display shown in an SDL window on the host of a native build.
 
+config DISPLAY_LINUX_FB
+    bool "Linux framebuffer"
+    depends on LINUX_WATCH
+    help
+      Present the Pebble framebuffer through the Linux fbdev interface.
+
 module = DRIVER_DISPLAY
 module-str = Display
 source "subsys/logging/Kconfig.template.log_level"

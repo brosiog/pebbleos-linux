@@ -343,6 +343,17 @@ static void prv_handle_glance_event(PebbleEvent *event, void *context) {
   LauncherAppGlanceService *service = context;
   PBL_ASSERTN(service);
 
+  if (!event->app_glance.app_uuid) {
+    // A database flush invalidates every cached app's glance.
+    for (ListNode *node = service->glance_cache; node; node = node->next) {
+      LauncherAppGlanceCacheEntry *entry = (LauncherAppGlanceCacheEntry *)node;
+      launcher_app_glance_update_current_slice(entry->glance);
+      prv_update_slice_expiration_timer_if_necessary(service,
+                                                     entry->glance->current_slice.expiration_time);
+    }
+    return;
+  }
+
   // Update the current slice of the glance that was changed if the glance is in the cache
   LauncherAppGlance *glance_in_cache =
       prv_find_glance_in_cache(service, event->app_glance.app_uuid);

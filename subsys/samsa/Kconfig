@@ -13,6 +13,22 @@ config SAMSA
 
 if SAMSA
 
+config SAMSA_NATIVE_ARM
+    bool "Execute Pebble apps directly on an ARM Linux host"
+    depends on LINUX_WATCH
+    default n
+    help
+      Experimental 32-bit soft-float ARM host using the Pebble app ABI.
+      Requires an ARMv7-compatible CPU and executable application RAM.
+
+config SAMSA_CACHE_ENTRIES
+    int "Predecoded instruction cache entries"
+    range 0 1024
+    default 0
+    help
+      Zero disables caching. Otherwise use a power of two up to 1024.
+      Each process uses about 12 bytes per entry.
+
 module = SAMSA
 module-str = Samsa
 source "subsys/logging/Kconfig.template.log_level"

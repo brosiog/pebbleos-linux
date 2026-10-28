@@ -70,6 +70,9 @@
 #ifdef CONFIG_APP_SCALING
   PREFS_MACRO(PREF_KEY_LEGACY_APP_RENDER_MODE, s_legacy_app_render_mode)
 #endif
+#ifdef CONFIG_LINUX_WATCH
+  PREFS_MACRO(PREF_KEY_AMBIENT_CLOCK_MODE, s_ambient_clock_mode)
+#endif
 
 #ifdef CONFIG_THEMING
   PREFS_MACRO(PREF_KEY_THEME_HIGHLIGHT_COLOR, s_theme_highlight_color)

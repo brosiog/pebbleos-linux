@@ -12,5 +12,8 @@ file(GLOB sources CONFIGURE_DEPENDS *.c)
 pbl_filter_sources(sources EXCLUDE ${excludes})
 pbl_library()
 pbl_library_sources(${sources})
+if(CONFIG_BT_HCI_LINUX)
+  pbl_library_include_directories(${PBL_BASE}/third_party/nimble/mynewt-nimble/nimble/host/src)
+endif()
 
 add_subdirectory(services)

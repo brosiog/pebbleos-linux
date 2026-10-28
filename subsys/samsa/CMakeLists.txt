@@ -18,6 +18,9 @@ add_custom_command(
 )
 
 pbl_library()
+if(CONFIG_SAMSA_NATIVE_ARM)
+pbl_library_sources(samsa_pbw.c samsa_runtime_arm.c)
+else()
 pbl_library_sources(
   samsa_manual.c
   samsa_pbw.c
@@ -25,9 +28,12 @@ pbl_library_sources(
   samsa_types.c
   ${thunks}
 )
+endif()
 pbl_library_include_directories(.)
 
 pbl_host_include_directories(.)
 pbl_host_sources(samsa_pbw_bottom.c)
-set_property(SOURCE ${thunks} TARGET_DIRECTORY ${PBL_CURRENT_LIBRARY}
-  APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_BINARY_DIR})
+if(NOT CONFIG_SAMSA_NATIVE_ARM)
+  set_property(SOURCE ${thunks} TARGET_DIRECTORY ${PBL_CURRENT_LIBRARY}
+    APPEND PROPERTY INCLUDE_DIRECTORIES ${PROJECT_BINARY_DIR})
+endif()

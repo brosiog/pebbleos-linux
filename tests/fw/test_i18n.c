@@ -72,6 +72,13 @@ void test_i18n__cleanup(void) {
 
 extern I18nString *prv_list_find_string(const char *string, void *owner);
 
+void test_i18n__optional_subtitle(void) {
+  cl_assert(i18n_get(nullptr, __FILE__) == nullptr);
+  cl_assert_equal_s(i18n_get("", __FILE__), "");
+  shell_prefs_set_language_english(true);
+  cl_assert(i18n_get(nullptr, __FILE__) == nullptr);
+}
+
 void test_i18n__music(void) {
   const char *first = i18n_get("Music", (void *)0x12345);
   cl_assert(strcmp(first, "Musique") == 0);

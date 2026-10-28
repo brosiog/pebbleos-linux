@@ -425,6 +425,12 @@ bool activity_algorithm_deinit(void) {
   return true;
 }
 
+static uint32_t s_external_steps_reports;
+void activity_algorithm_handle_external_steps(uint16_t steps, uint32_t elapsed_ms, time_t utc_sec) {
+  s_external_steps_reports++;
+  s_test_alg_state.steps += steps;
+}
+
 void activity_algorithm_handle_accel(AccelRawData *data, uint32_t num_samples, uint64_t timestamp) {
   // For testing purposes, we'll use the x movement as the steps and y as the sleep state
   ActivitySleepState prior_state = s_test_alg_state.minute_data.sleep_state;
@@ -3106,4 +3112,30 @@ void test_activity__activity_sessions_add_delete_sessions(void) {
   cl_assert_equal_i(activity_private_state()->activity_sessions_count, 2);
   cl_assert_equal_m(&activity_private_state()->activity_sessions[0], &a1, sizeof(ActivitySession));
   cl_assert_equal_m(&activity_private_state()->activity_sessions[1], &a3, sizeof(ActivitySession));
+}
+
+// ---------------------------------------------------------------------------------------
+// Hardware pedometer steps reach the step metric only while tracking runs.
+void test_activity__external_steps(void) {
+  int32_t value;
+  s_external_steps_reports = 0;
+  activity_handle_external_steps(30, 20000);
+  cl_assert_equal_i(s_external_steps_reports, 0);
+
+  activity_start_tracking(false /*test_mode*/);
+  fake_system_task_callbacks_invoke_pending();
+  activity_get_metric(ActivityMetricStepCount, 1, &value);
+  const int32_t before = value;
+
+  activity_handle_external_steps(0, 0);
+  cl_assert_equal_i(s_external_steps_reports, 1);
+  activity_handle_external_steps(30, 20000);
+  cl_assert_equal_i(s_external_steps_reports, 2);
+  activity_get_metric(ActivityMetricStepCount, 1, &value);
+  cl_assert_equal_i(value, before + 30);
+
+  activity_stop_tracking();
+  fake_system_task_callbacks_invoke_pending();
+  activity_handle_external_steps(5, 5000);
+  cl_assert_equal_i(s_external_steps_reports, 2);
 }

@@ -304,6 +304,10 @@ static void prv_preset_menu_select(OptionMenu *option_menu, int selection, void 
   settings_menu_reload_data(SettingsMenuItemDisplay);
   settings_menu_mark_dirty(SettingsMenuItemDisplay);
   app_window_stack_remove(&option_menu->window, true /* animated */);
+  if (selection == BacklightPreset_Advanced) {
+    // Advanced keeps the current settings; show them so choosing it visibly does something.
+    prv_backlight_submenu_push();
+  }
 }
 
 static void prv_preset_menu_push(SettingsDisplayData *data) {
@@ -338,6 +342,29 @@ static void prv_legacy_app_mode_menu_push(SettingsDisplayData *data) {
   settings_option_menu_push(title, OptionMenuContentType_SingleLine, index, &callbacks,
                             ARRAY_LENGTH(s_legacy_app_mode_labels), false /* icons_enabled */,
                             s_legacy_app_mode_labels, data);
+}
+#endif
+
+#ifdef CONFIG_LINUX_WATCH
+// Always-on clock, drawn over every watchface while the display idles
+/////////////////////////////
+static const char *s_ambient_clock_labels[] = {
+  i18n_noop("Off"), i18n_noop("Analog"), i18n_noop("Digital")
+};
+
+static void prv_ambient_clock_menu_select(OptionMenu *option_menu, int selection, void *context) {
+  shell_prefs_set_ambient_clock_mode((AmbientClockMode)selection);
+  app_window_stack_remove(&option_menu->window, true /*animated*/);
+}
+
+static void prv_ambient_clock_menu_push(SettingsDisplayData *data) {
+  const OptionMenuCallbacks callbacks = {
+    .select = prv_ambient_clock_menu_select,
+  };
+  settings_option_menu_push(i18n_noop("Always-On Clock"), OptionMenuContentType_SingleLine,
+                            (int)shell_prefs_get_ambient_clock_mode(), &callbacks,
+                            ARRAY_LENGTH(s_ambient_clock_labels), false /* icons_enabled */,
+                            s_ambient_clock_labels, data);
 }
 #endif
 
@@ -581,6 +608,9 @@ static void prv_backlight_submenu_push(void) {
 enum SettingsDisplayItem {
   SettingsDisplayBacklight,
   SettingsDisplayBacklightSettings,
+#ifdef CONFIG_LINUX_WATCH
+  SettingsDisplayAmbientClock,
+#endif
 #ifdef CONFIG_TOUCH
   SettingsDisplayTouchNav,
   SettingsDisplayTouchNavMenus,
@@ -634,6 +664,11 @@ static void prv_display_select_click_cb(SettingsCallbacks *context, uint16_t row
     case SettingsDisplayBacklightSettings:
       prv_backlight_submenu_push();
       break;
+#ifdef CONFIG_LINUX_WATCH
+    case SettingsDisplayAmbientClock:
+      prv_ambient_clock_menu_push((SettingsDisplayData *)context);
+      break;
+#endif
 #ifdef CONFIG_TOUCH
     case SettingsDisplayTouchNav:
       // The master "Touch" row IS the global touch kill switch:
@@ -681,6 +716,12 @@ static void prv_display_draw_row_cb(SettingsCallbacks *context, GContext *ctx,
     case SettingsDisplayBacklightSettings:
       title = i18n_noop("Backlight Settings");
       break;
+#ifdef CONFIG_LINUX_WATCH
+    case SettingsDisplayAmbientClock:
+      title = i18n_noop("Always-On Clock");
+      subtitle = s_ambient_clock_labels[shell_prefs_get_ambient_clock_mode()];
+      break;
+#endif
 #ifdef CONFIG_TOUCH
     case SettingsDisplayTouchNav:
       title = i18n_noop("Touch");

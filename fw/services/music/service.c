@@ -78,6 +78,7 @@ struct MusicServiceContext {
   //! for the current track. Set on every response (art or NoArt), so a NoArt reply also stops the
   //! re-request. @see music_album_art_is_current
   uint8_t album_art_generation;
+  bool album_art_response_received;
 
   //! Generation token, bumped whenever the track (title/artist) changes. Used to discard album art
   //! that arrives after a track change. @see music_get_now_playing_generation
@@ -110,6 +111,7 @@ void music_init(void) {
   pbl_mutex_init(&s_music_ctx.mutex);
   s_music_ctx.now_playing_event_pending = false;
   s_music_ctx.pos_event_pending = false;
+  s_music_ctx.album_art_response_received = false;
   imaging_register_handler(ImagingImageTypeAlbumArt, prv_imaging_album_art_received);
   imaging_register_transfer_handlers(ImagingImageTypeAlbumArt, prv_imaging_album_art_will_receive,
                                      prv_imaging_album_art_transfer_failed);
@@ -220,6 +222,7 @@ bool music_set_connected_server(const MusicServerImplementation *implementation,
     // now_playing no longer drops art on a track change (see music_update_now_playing), so clear it
     // explicitly here: a connect/disconnect must not leave the previous session's art on screen.
     prv_free_album_art_locked();
+    s_music_ctx.album_art_response_received = false;
     music_update_now_playing(nullptr, 0, nullptr, 0, nullptr, 0);
     music_update_track_duration(0);
     const MusicPlayerStateUpdate state = {
@@ -272,6 +275,7 @@ void music_update_now_playing(const char *title, size_t title_length, const char
                              prv_str_differs(s_music_ctx.album, album, album_length);
   if (track_changed) {
     s_music_ctx.now_playing_generation++;
+    s_music_ctx.album_art_response_received = false;
   }
 
   copy_and_truncate(s_music_ctx.title, title, title_length);
@@ -286,6 +290,11 @@ void music_update_now_playing(const char *title, size_t title_length, const char
 static void prv_update_string_and_put_event(const char *value, size_t value_length, off_t offset) {
   pbl_mutex_lock(&s_music_ctx.mutex, PBL_FOREVER);
   char *buffer = ((char *)&s_music_ctx) + offset;
+  if (offset != offsetof(typeof(s_music_ctx), player_name) &&
+      prv_str_differs(buffer, value, value_length)) {
+    s_music_ctx.now_playing_generation++;
+    s_music_ctx.album_art_response_received = false;
+  }
   copy_and_truncate(buffer, value, value_length);
   pbl_mutex_unlock(&s_music_ctx.mutex);
   prv_put_now_playing_changed_event();
@@ -591,6 +600,7 @@ void music_set_album_art(GBitmap *bitmap, uint8_t token) {
   // Record that we've now got a response (art, or NULL for NoArt) for this track, so the Music app
   // stops re-requesting until the track changes again.
   s_music_ctx.album_art_generation = token;
+  s_music_ctx.album_art_response_received = true;
 
   pbl_mutex_unlock(&s_music_ctx.mutex);
 
@@ -612,7 +622,8 @@ void music_album_art_transfer_failed(uint8_t token) {
 
 bool music_album_art_is_current(void) {
   pbl_mutex_lock(&s_music_ctx.mutex, PBL_FOREVER);
-  const bool is_current = (s_music_ctx.album_art_generation == s_music_ctx.now_playing_generation);
+  const bool is_current = s_music_ctx.album_art_response_received &&
+                         s_music_ctx.album_art_generation == s_music_ctx.now_playing_generation;
   pbl_mutex_unlock(&s_music_ctx.mutex);
   return is_current;
 }

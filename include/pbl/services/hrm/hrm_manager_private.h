@@ -121,7 +121,12 @@ typedef struct HRMSubscriberState {
  * The subscriber then waits for its next interval instead of holding the sensor on. Well above
  * a normal serve cycle (spin-up plus a few seconds), well below the battery impact threshold.
  */
+#ifdef CONFIG_HRM_LINUX_WATCH
+// The vendor BPM service reports within about 10 s; no reading by 30 s means poor contact.
+#define HRM_MAX_UNSERVED_TIME_SEC 30
+#else
 #define HRM_MAX_UNSERVED_TIME_SEC 120
+#endif
 
 /** @brief HRM manager state. */
 struct HRMManagerState {

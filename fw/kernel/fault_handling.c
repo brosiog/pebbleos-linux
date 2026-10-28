@@ -1,6 +1,10 @@
 /* SPDX-FileCopyrightText: 2024 Google LLC */
 /* SPDX-License-Identifier: Apache-2.0 */
 
+#if defined(CONFIG_LINUX_WATCH) && __has_include(<execinfo.h>)
+#include <execinfo.h>
+#define PRV_HAVE_BACKTRACE 1
+#endif
 #include <pbl/kernel/fatal.h>
 #include <pbl/kernel/irq.h>
 #include <pbl/kernel/sched.h>
@@ -149,6 +153,20 @@ extern void sys_app_fault(uint32_t lr);
 }
 
 [[noreturn]] void pbl_fatal_error_handler(uintptr_t lr) {
+#ifdef CONFIG_LINUX_WATCH
+  // Keep the original fault address even when the serial console is in prompt mode.
+  fprintf(stderr, "NATIVE_FATAL lr=%p task=%d\n", (void *)lr, pebble_task_get_current());
+#ifdef PRV_HAVE_BACKTRACE
+  // ARM EHABI unwind tables are retained in the runtime image.
+  void *frames[24];
+  int depth = backtrace(frames, 24);
+  fprintf(stderr, "NATIVE_FATAL backtrace:");
+  for (int i = 0; i < depth; i++) {
+    fprintf(stderr, " %p", frames[i]);
+  }
+  fprintf(stderr, "\n");
+#endif
+#endif
   trigger_fault(RebootReasonCode_Assert, lr);
 }
 
@@ -226,6 +244,51 @@ PBL_SYSCALL_NORETURN(sys_app_fault, (VAL, uint32_t, stashed_lr)) {
 [[noreturn]] void pbl_kernel_syscall_fault(uintptr_t lr) {
   sys_app_fault(lr);
 }
+
+#ifdef CONFIG_ARCH_POSIX
+#include <posix_host.h>
+
+#include "../../kernel/arch/posix/posix.h"
+
+// A native build gets SIGSEGV/SIGBUS/SIGILL instead of hardware faults. A fault
+// on the app or worker thread kills only that process, as an MPU fault would.
+static uintptr_t s_posix_fault_pc;
+static uintptr_t s_posix_fault_lr;
+
+static void prv_posix_fault_landing_zone(void) {
+  CrashInfo crash_info = make_crash_info_pc_lr(s_posix_fault_pc, s_posix_fault_lr);
+  setup_log_app_crash_info(crash_info);
+  prv_log_app_lr_and_pc_system_task(&s_current_app_crash_info);
+  prv_kill_user_process((uint32_t)s_posix_fault_lr);
+  for (;;) {
+  } // Not Reached
+}
+
+uintptr_t posix_host_fault_landing(uintptr_t pc, uintptr_t lr) {
+  struct pbl_thread *thread = pbl_thread_current();
+  if (thread == nullptr || posix_in_isr || pbl_irq_is_locked() ||
+      thread->backend.arch.pt == nullptr ||
+      !pthread_equal(thread->backend.arch.pt->tid, pthread_self())) {
+    return 0;
+  }
+  const PebbleTask task = pebble_task_get_task_for_thread(thread);
+  if (task != PebbleTask_App && task != PebbleTask_Worker) {
+    return 0;
+  }
+  // A second fault on the same thread right away means the landing zone itself failed.
+  static struct pbl_thread *s_dying_thread;
+  static uint64_t s_dying_since_us;
+  const uint64_t now_us = posix_host_monotonic_us();
+  if (s_dying_thread == thread && now_us - s_dying_since_us < 2000000) {
+    return 0;
+  }
+  s_dying_thread = thread;
+  s_dying_since_us = now_us;
+  s_posix_fault_pc = pc;
+  s_posix_fault_lr = lr;
+  return (uintptr_t)prv_posix_fault_landing_zone;
+}
+#endif
 
 // The hardware fault handlers; a native build gets signals instead.
 #ifndef CONFIG_ARCH_POSIX

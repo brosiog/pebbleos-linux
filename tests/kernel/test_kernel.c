@@ -2,6 +2,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
 #define _POSIX_C_SOURCE 200809L
+#define CONFIG_SOC_POSIX 1
 
 #include <errno.h>
 #include <stdio.h>
@@ -11,6 +12,7 @@
 
 #include <pbl/kernel/compiler.h>
 #include <pbl/kernel/kernel.h>
+#include <pbl/mcu/interrupts.h>
 
 #include <clar.h>
 #include <kernel_test.h>
@@ -251,14 +253,20 @@ void test_kernel__semaphore_handoff_and_timeout(void) {
 }
 
 static void prv_isr_taker(void *arg) {
+  cl_assert(!mcu_state_is_isr());
   cl_assert_equal_i(pbl_sem_take(&s_sem, PBL_FOREVER), 0);
+  cl_assert(!mcu_state_is_isr());
   prv_trace('T');
   pbl_test_kernel_stop();
 }
 
 static void prv_isr_giver(void *arg) {
+  cl_assert(!mcu_state_is_isr());
+  cl_assert_equal_i(mcu_state_get_isr_priority(), ~0U);
   prv_trace('i');
   pbl_test_isr_enter();
+  cl_assert(mcu_state_is_isr());
+  cl_assert_equal_i(mcu_state_get_isr_priority(), PBL_IRQ_PRIO_KERNEL);
   pbl_sem_give(&s_sem);
   prv_trace('g');
   pbl_test_isr_exit(); // the higher-priority taker runs on ISR exit

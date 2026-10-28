@@ -49,12 +49,15 @@ typedef struct {
   int32_t steps;
 
   // Last computed step rate information
-  uint8_t rate_steps;
-  uint16_t rate_elapsed_ms;
+  uint16_t rate_steps;
+  uint32_t rate_elapsed_ms;
   time_t rate_computed_time_s;
 
   // Minute data
   uint16_t minute_steps;
+
+  // Last report from a hardware pedometer; 0 if none
+  time_t external_steps_utc;
 
   // The data logging session and record we use to send minute data to the phone
   DataLoggingSession *dls_session;
@@ -856,6 +859,31 @@ bool activity_algorithm_set_user(uint32_t height_mm, uint32_t weight_g, Activity
 }
 
 // ------------------------------------------------------------------------------------
+// A hardware pedometer reports at least this often while active, zero steps included.
+#define EXTERNAL_STEPS_TIMEOUT_S (5 * PBL_SEC_PER_MIN)
+static bool prv_external_steps_active(time_t utc_sec) {
+  time_t last = s_alg_state->external_steps_utc;
+  return last && utc_sec >= last - PBL_SEC_PER_MIN && utc_sec - last < EXTERNAL_STEPS_TIMEOUT_S;
+}
+
+// ------------------------------------------------------------------------------------
+void activity_algorithm_handle_external_steps(uint16_t steps, uint32_t elapsed_ms,
+                                              time_t utc_sec) {
+  if (!prv_lock()) {
+    return;
+  }
+  s_alg_state->external_steps_utc = utc_sec;
+  if (steps) {
+    s_alg_state->steps += steps;
+    s_alg_state->minute_steps += steps;
+    s_alg_state->rate_steps = steps;
+    s_alg_state->rate_elapsed_ms = elapsed_ms;
+    s_alg_state->rate_computed_time_s = utc_sec;
+  }
+  prv_unlock();
+}
+
+// ------------------------------------------------------------------------------------
 void activity_algorithm_handle_accel(AccelRawData *data, uint32_t num_samples,
                                      uint64_t timestamp_ms) {
   if (!prv_lock()) {
@@ -864,6 +892,11 @@ void activity_algorithm_handle_accel(AccelRawData *data, uint32_t num_samples,
   uint32_t consumed_samples;
   uint16_t new_steps =
       kalg_analyze_samples(s_alg_state->k_state, data, num_samples, &consumed_samples);
+  // The samples still feed the minute VMC/orientation used for sleep.
+  if (prv_external_steps_active(timestamp_ms / PBL_MSEC_PER_SEC)) {
+    prv_unlock();
+    return;
+  }
   s_alg_state->steps += new_steps;
   s_alg_state->minute_steps += new_steps;
 

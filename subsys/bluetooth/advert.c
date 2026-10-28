@@ -16,6 +16,9 @@
 #include <pbl/util/math.h>
 
 #include <host/ble_gap.h>
+#ifdef CONFIG_BT_HCI_LINUX
+#include <ble_hs_priv.h>
+#endif
 #include <kernel/pbl_malloc.h>
 #include <os/os_mbuf.h>
 
@@ -25,6 +28,17 @@ static const ble_uuid16_t s_device_name_chr_uuid = BLE_UUID16_INIT(0x2A00);
 static char s_device_name[PBL_BT_DEVICE_NAME_BUFFER_SIZE];
 static bool s_pairing_in_progress;
 static uint16_t s_pairing_conn_handle;
+static bool s_advert_requested;
+static uint32_t s_advert_min_interval_ms;
+static uint32_t s_advert_max_interval_ms;
+
+static void prv_resume_advertising(void) {
+  if (s_advert_requested && !ble_gap_adv_active()) {
+    if (!pbl_bt_advert_advertising_enable(s_advert_min_interval_ms, s_advert_max_interval_ms)) {
+      PBL_LOG_ERR("Failed to resume advertising after an interrupted connection");
+    }
+  }
+}
 
 static int prv_device_name_read_event_cb(uint16_t conn_handle, const struct ble_gatt_error *error,
                                          struct ble_gatt_attr *attr, void *arg) {
@@ -54,6 +68,7 @@ static int prv_device_name_read_op_start(void *ctx) {
 
 void pbl_bt_advert_advertising_disable(void) {
   int rc;
+  s_advert_requested = false;
 
   if (ble_gap_adv_active() == 0) {
     return;
@@ -88,14 +103,42 @@ bool pbl_bt_advert_set_advertising_data(const struct pbl_bt_ad_data *ad_data) {
 
 static void prv_handle_connection_event(struct ble_gap_event *event) {
   // we only want to notify on a successful connection
-  if (event->connect.status != 0)
+  if (event->connect.status != 0) {
+    // NimBLE stops advertising even when the incoming connection fails.
+    prv_resume_advertising();
     return;
+  }
+  s_advert_requested = false;
 
   struct ble_gap_conn_desc desc;
   if (ble_gap_conn_find(event->connect.conn_handle, &desc) != 0) {
     PBL_LOG_ERR("prv_handle_connection_event: Failed to find connection descriptor");
     return;
   }
+
+#ifdef CONFIG_BT_HCI_LINUX
+  if (desc.peer_id_addr.type == BLE_ADDR_RANDOM && (desc.peer_id_addr.val[5] & 0xc0) == 0x40) {
+    struct ble_store_key_sec key = {.peer_addr = desc.peer_id_addr};
+    struct ble_store_value_sec bond;
+    if (ble_store_read_peer_sec(&key, &bond) == 0 && bond.irk_present &&
+        ble_addr_cmp(&bond.peer_addr, &desc.peer_id_addr) != 0 &&
+        (bond.peer_addr.type == BLE_ADDR_PUBLIC || bond.peer_addr.type == BLE_ADDR_RANDOM)) {
+      // Keep OTA addresses intact for Secure Connections authentication.
+      ble_hs_lock();
+      struct ble_hs_conn *conn = ble_hs_conn_find(desc.conn_handle);
+      if (conn && ble_addr_cmp(&conn->bhc_peer_addr, &desc.peer_id_addr) == 0) {
+        conn->bhc_peer_rpa_addr = desc.peer_ota_addr;
+        conn->bhc_peer_addr = bond.peer_addr;
+        conn->bhc_peer_addr.type += 2; // PUBLIC_ID or RANDOM_ID, as from controller resolution.
+      }
+      ble_hs_unlock();
+      if (ble_gap_conn_find(event->connect.conn_handle, &desc) != 0) {
+        return;
+      }
+      PBL_LOG_INFO("Restored saved peer identity for incoming private address");
+    }
+  }
+#endif
 
   struct pbl_bt_conn_complete_event complete_event = {
     .handle = event->connect.conn_handle,
@@ -364,8 +407,31 @@ static int prv_handle_repeat_pairing_event(struct ble_gap_event *event) {
     return ret;
   }
 
-  PBL_LOG_INFO("Repeat pairing: deleting stored peer keys and retrying");
-  ble_store_util_delete_peer(&desc.peer_id_addr);
+  ble_addr_t identity = desc.peer_id_addr;
+#ifdef CONFIG_BT_HCI_LINUX
+  // Software RPA lookup can find a bond before the controller resolves the peer.
+  struct ble_store_key_sec key = {.peer_addr = identity};
+  struct ble_store_value_sec bond;
+  ret = ble_store_read_peer_sec(&key, &bond);
+  if (ret != 0) {
+    PBL_LOG_WRN("Repeat pairing: could not resolve stored peer (%d)", ret);
+    return BLE_GAP_REPEAT_PAIRING_IGNORE;
+  }
+  identity = bond.peer_addr;
+#endif
+  ret = ble_store_util_delete_peer(&identity);
+  if (ret != 0) {
+    PBL_LOG_WRN("Repeat pairing: could not delete stored peer (%d)", ret);
+    return BLE_GAP_REPEAT_PAIRING_IGNORE;
+  }
+#ifdef CONFIG_BT_HCI_LINUX
+  ret = ble_store_read_peer_sec(&key, &bond);
+  if (ret != BLE_HS_ENOENT) {
+    PBL_LOG_WRN("Repeat pairing: stored peer still readable (%d)", ret);
+    return BLE_GAP_REPEAT_PAIRING_IGNORE;
+  }
+#endif
+  PBL_LOG_INFO("Repeat pairing: stored peer keys removed; retrying");
 
   return BLE_GAP_REPEAT_PAIRING_RETRY;
 #else
@@ -393,6 +459,9 @@ static int prv_handle_gap_event(struct ble_gap_event *event, void *arg) {
     case BLE_GAP_EVENT_DISCONNECT:
       PBL_LOG_DBG("BLE_GAP_EVENT_DISCONNECT reason=0x%x", event->disconnect.reason);
       prv_handle_disconnection_event(event);
+      break;
+    case BLE_GAP_EVENT_ADV_COMPLETE:
+      prv_resume_advertising();
       break;
     case BLE_GAP_EVENT_ENC_CHANGE:
       PBL_LOG_DBG("BLE_GAP_EVENT_ENC_CHANGE");
@@ -474,5 +543,8 @@ bool pbl_bt_advert_advertising_enable(uint32_t min_interval_ms, uint32_t max_int
     return false;
   }
 
+  s_advert_min_interval_ms = min_interval_ms;
+  s_advert_max_interval_ms = max_interval_ms;
+  s_advert_requested = true;
   return true;
 }

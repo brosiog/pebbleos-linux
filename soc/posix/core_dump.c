@@ -17,7 +17,8 @@ void coredump_assert(int line) {
 }
 
 [[noreturn]] void core_dump_reset(bool is_forced) {
-  fprintf(stderr, "core dump requested, aborting\n");
+  fprintf(stderr, "core dump requested forced=%d caller=%p, aborting\n", is_forced,
+          __builtin_return_address(0));
   abort();
 }
 

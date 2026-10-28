@@ -7,6 +7,7 @@
 #include "process_runtime.h"
 
 // Pebble stuff
+#include <pbl/drivers/rtc.h>
 #include <pbl/kernel/assert.h>
 #include <pbl/kernel/fatal.h>
 #include <pbl/kernel/mutex.h>
@@ -64,6 +65,10 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
+#ifdef CONFIG_LINUX_WATCH
+#include <pbl/drivers/display/linux.h>
+#endif
 #include <string.h>
 
 #include <pbl/util/testing.h>
@@ -174,6 +179,12 @@ static void prv_heap_lock(void *unused) {
 }
 
 void prv_dump_start_app_info(const PebbleProcessMd *app_md) {
+#ifdef CONFIG_LINUX_WATCH
+  if (getenv("PBL_APP_TRACE")) {
+    fprintf(stderr, "APP_TRACE start ticks=%" PRIu64 " name=%s\n", (uint64_t)rtc_get_ticks(),
+            process_metadata_get_name(app_md));
+  }
+#endif
   char *app_type = "";
   switch (process_metadata_get_app_sdk_type(app_md)) {
     case ProcessAppSDKType_System:
@@ -418,6 +429,12 @@ static bool prv_app_start(const PebbleProcessMd *app_md, const void *args,
 #endif
 
   s_app_task_context.task_handle = pebble_task_create(PebbleTask_App, &attr);
+#ifdef CONFIG_LINUX_WATCH
+  if (getenv("PBL_APP_TRACE")) {
+    fprintf(stderr, "APP_TRACE loaded ticks=%" PRIu64 " name=%s\n", (uint64_t)rtc_get_ticks(),
+            process_metadata_get_name(app_md));
+  }
+#endif
 
   // Always notify the phone that the application is running
   app_run_state_send_update(&app_md->uuid, RUNNING);
@@ -711,6 +728,12 @@ bool app_manager_launch_new_app(const AppLaunchConfig *config) {
   // app_install_release_md if we don't actually proceed with launching the app.
 
   const PebbleProcessMd *app_md = config->md;
+#ifdef CONFIG_LINUX_WATCH
+  if (getenv("PBL_APP_TRACE")) {
+    fprintf(stderr, "APP_TRACE request ticks=%" PRIu64 " name=%s\n", (uint64_t)rtc_get_ticks(),
+            process_metadata_get_name(app_md));
+  }
+#endif
   const AppInstallId new_app_id = app_install_get_id_for_uuid(&app_md->uuid);
 
   if (!config->restart && uuid_equal(&(app_md->uuid), &(s_app_task_context.app_md->uuid))) {
@@ -966,6 +989,14 @@ static int prv_cmd_app_active(const struct pbl_shell *sh, size_t argc, char **ar
   pbl_shell_print(sh, "is watchface: %d", (app_metadata->process_type == ProcessTypeWatchface));
   pbl_shell_print(sh, "visibility: %u", app_metadata->visibility);
   pbl_shell_print(sh, "bank: %d", (uint8_t)process_metadata_get_res_bank_num(app_metadata));
+  pbl_shell_print(sh, "install id: %" PRId32, app_manager_get_current_app_id());
+#ifdef CONFIG_LINUX_WATCH
+  pbl_shell_print(sh, "display interactive: %d frames: %" PRIu64,
+                  display_linux_is_interactive(), display_linux_frame_count());
+#endif
+#ifndef CONFIG_SHELL_SDK
+  pbl_shell_print(sh, "default face: %" PRId32, watchface_get_default_install_id());
+#endif
   return 0;
 }
 

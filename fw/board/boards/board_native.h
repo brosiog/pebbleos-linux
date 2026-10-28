@@ -8,11 +8,14 @@
 
 extern UARTDevice *const DBG_UART;
 extern UARTDevice *const QEMU_UART;
-#ifdef CONFIG_BT_HCI_UART
+#if defined(CONFIG_BT_HCI_UART) || defined(CONFIG_BT_HCI_LINUX)
 extern UARTDevice *const BT_HCI_UART;
 #endif
 extern DisplayDevice *const DISPLAY;
 extern MicDevice *const MIC;
+#ifdef CONFIG_HRM_LINUX_WATCH
+extern HRMDevice *const HRM;
+#endif
 extern const BoardConfigPower BOARD_CONFIG_POWER;
 extern const BoardConfig BOARD_CONFIG;
 extern const BoardConfigButton BOARD_CONFIG_BUTTON;

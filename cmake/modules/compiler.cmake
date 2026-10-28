@@ -5,6 +5,11 @@
 
 add_compile_options($<$<COMPILE_LANGUAGE:C>:-std=c23>)
 
+if(CONFIG_SAMSA)
+  # SamsaCpu must have the same layout in the interpreter and generated thunks.
+  add_compile_definitions(SAMSA_CACHE_ENTRIES=${CONFIG_SAMSA_CACHE_ENTRIES})
+endif()
+
 add_compile_options(
   -Wall
   -Wextra
@@ -158,7 +163,7 @@ endif()
 # Kconfig reaches every compilation unit, headers included.
 # SHELL: keeps the flag and its argument together; CMake would
 # otherwise fold the repeated -include options into one.
-add_compile_options("SHELL:-include ${PBL_AUTOCONF_H}")
+add_compile_options("SHELL:-include \"${PBL_AUTOCONF_H}\"")
 
 # MAX_FONT_GLYPH_SIZE comes from the SDK platform description.
 execute_process(

@@ -34,4 +34,9 @@ config BUTTON_SDL
     help
       Buttons driven by the keyboard, through SDL, in a native build.
 
+config BUTTON_LINUX_EVDEV
+    bool "Linux evdev buttons and bezel"
+    depends on LINUX_WATCH
+    select INPUT
+
 endmenu

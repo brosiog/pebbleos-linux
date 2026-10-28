@@ -275,6 +275,19 @@ LegacyAppRenderMode shell_prefs_get_legacy_app_render_mode(void);
 void shell_prefs_set_legacy_app_render_mode(LegacyAppRenderMode mode);
 #endif
 
+#ifdef CONFIG_LINUX_WATCH
+// Clock shown while the display idles, over every watchface.
+typedef enum AmbientClockMode {
+  AmbientClockMode_Off = 0,
+  AmbientClockMode_Analog = 1,
+  AmbientClockMode_Digital = 2,
+  AmbientClockModeCount
+} AmbientClockMode;
+
+AmbientClockMode shell_prefs_get_ambient_clock_mode(void);
+void shell_prefs_set_ambient_clock_mode(AmbientClockMode mode);
+#endif
+
 #ifdef CONFIG_ORIENTATION_MANAGER
 bool display_orientation_is_left(void);
 void display_orientation_set_left(bool left);

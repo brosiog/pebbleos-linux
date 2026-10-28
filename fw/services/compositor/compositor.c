@@ -8,6 +8,13 @@
 #include <pbl/util/math.h>
 #include <pbl/util/testing.h>
 
+#ifdef CONFIG_LINUX_WATCH
+#include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <pbl/drivers/rtc.h>
+#endif
+
 #include <applib/graphics/bitblt.h>
 #include <applib/graphics/framebuffer.h>
 #include <applib/graphics/gcontext.h>
@@ -413,6 +420,12 @@ static void prv_release_app_framebuffer(void) {
 }
 
 void compositor_app_render_ready(void) {
+#ifdef CONFIG_LINUX_WATCH
+  if (getenv("PBL_APP_TRACE")) {
+    fprintf(stderr, "APP_TRACE frame_ready ticks=%" PRIu64 " id=%" PRId32 "\n",
+            (uint64_t)rtc_get_ticks(), app_manager_get_current_app_id());
+  }
+#endif
   if (!prv_should_render()) {
     s_deferred_render.app.pending = true;
     return;
@@ -420,6 +433,12 @@ void compositor_app_render_ready(void) {
 
   if (s_state == CompositorState_AppTransitionPending) {
     // Huzzah, the app sent us the first frame!
+#ifdef CONFIG_LINUX_WATCH
+    if (getenv("PBL_APP_TRACE")) {
+      fprintf(stderr, "APP_TRACE first_frame ticks=%" PRIu64 " id=%" PRId32 "\n",
+              (uint64_t)rtc_get_ticks(), app_manager_get_current_app_id());
+    }
+#endif
     if (s_animation_state.animation) {
       // We have an animation to run, run it.
       s_state = CompositorState_Transitioning;

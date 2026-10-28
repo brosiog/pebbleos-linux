@@ -3,6 +3,10 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#ifdef CONFIG_LINUX_WATCH
+#include <stdio.h>
+#include <stdlib.h>
+#endif
 
 #include <pbl/logging/logging.h>
 
@@ -11,6 +15,16 @@
 
 void app_log_vargs(uint8_t log_level, const char *src_filename, int src_line_number,
                    const char *fmt, va_list args) {
+#ifdef CONFIG_LINUX_WATCH
+  if (getenv("PBL_APP_TRACE")) {
+    va_list copy;
+    va_copy(copy, args);
+    fprintf(stderr, "APP_SDK %s:%d ", src_filename, src_line_number);
+    vfprintf(stderr, fmt, copy);
+    fputc('\n', stderr);
+    va_end(copy);
+  }
+#endif
   char log_buffer[LOG_BUFFER_LENGTH];
   static_assert(sizeof(log_buffer) > sizeof(AppLogBinaryMessage),
                 "log_buffer too small for AppLogBinaryMessage");

@@ -4,6 +4,11 @@
 #include "samsa_runtime.h"
 
 #include <inttypes.h>
+#ifdef CONFIG_LINUX_WATCH
+#include <stdio.h>
+#include <stdlib.h>
+#include <posix_host.h>
+#endif
 
 #include <pbl/logging/logging.h>
 #include <pbl/util/size.h>
@@ -65,6 +70,16 @@ typedef struct {
   SamsaHook hooks[1];
   bool running;
   uint32_t last_call;
+#ifdef CONFIG_LINUX_WATCH
+  bool trace;
+  uint64_t last_sdk_end;
+  bool profile;
+  uint64_t profile_sdk_us;
+  struct {
+    uint64_t us;
+    uint32_t calls;
+  } profile_sdk[1024];
+#endif
 
   // Firmware objects outside the process's RAM, one 64 KiB window of its
   // address space each.
@@ -618,6 +633,17 @@ static const char *prv_stop_name(SamsaStop stop) {
   process_manager_task_exit();
 }
 
+#ifdef CONFIG_LINUX_WATCH
+static void prv_profile_dump(Process *p, const char *phase) {
+  for (unsigned i = 0; i < g_samsa_num_thunks && i < ARRAY_LENGTH(p->profile_sdk); i++) {
+    if (p->profile_sdk[i].us >= 1000 || p->profile_sdk[i].calls >= 100) {
+      fprintf(stderr, "APP_PROFILE %s sdk=%s calls=%u us=%" PRIu64 "\n", phase,
+              g_samsa_thunk_names[i], p->profile_sdk[i].calls, p->profile_sdk[i].us);
+    }
+  }
+}
+#endif
+
 static SamsaStop prv_handler(SamsaCpu *cpu, SamsaStop why, void *ctx) {
   if (why != SAMSA_STOP_HOOK) {
     return why;
@@ -628,12 +654,43 @@ static SamsaStop prv_handler(SamsaCpu *cpu, SamsaStop why, void *ctx) {
     return SAMSA_STOP_USAGE;
   }
   p->last_call = idx;
+#ifdef CONFIG_LINUX_WATCH
+  uint64_t started = (p->trace || p->profile) ? posix_host_monotonic_us() : 0;
+  uint64_t nested_sdk_us = p->profile_sdk_us;
+  if (p->profile && !strcmp(g_samsa_thunk_names[idx], "app_event_loop")) {
+    prv_profile_dump(p, "init");
+  }
+  if (p->trace && p->last_sdk_end && started - p->last_sdk_end > 20000) {
+    fprintf(stderr, "APP_TRACE guest_gap us=%" PRIu64 " next=%s\n",
+            started - p->last_sdk_end, g_samsa_thunk_names[idx]);
+  }
+#endif
   prv_sync_retained(p);
   SamsaThunk thunk = g_samsa_thunks[idx];
   if (!thunk) {
     prv_kill(p, "unsupported SDK call");
   }
   thunk(cpu);
+  // SDK calls can write directly into guest RAM, including executable bytes.
+  samsa_invalidate(cpu, 0, UINT32_MAX);
+#ifdef CONFIG_LINUX_WATCH
+  if (p->trace || p->profile) {
+    uint64_t ended = posix_host_monotonic_us();
+    if (p->trace && ended - started > 20000) {
+      fprintf(stderr, "APP_TRACE sdk us=%" PRIu64 " name=%s\n", ended - started,
+              g_samsa_thunk_names[idx]);
+    }
+    p->last_sdk_end = ended;
+    if (p->profile) {
+      uint64_t exclusive = ended - started - (p->profile_sdk_us - nested_sdk_us);
+      p->profile_sdk_us += exclusive;
+      if (idx < ARRAY_LENGTH(p->profile_sdk)) {
+        p->profile_sdk[idx].calls++;
+        p->profile_sdk[idx].us += exclusive;
+      }
+    }
+  }
+#endif
   return SAMSA_STOP_BUDGET;
 }
 
@@ -645,8 +702,24 @@ void samsa_call_guest(uint32_t fn, const uint32_t *args, unsigned nargs, uint32_
     *ret = 0;
     return;
   }
+  // Host callbacks may follow asynchronous writes into guest memory.
+  samsa_invalidate(&p->cpu, 0, UINT32_MAX);
+#ifdef CONFIG_LINUX_WATCH
+  uint64_t started = p->profile ? posix_host_monotonic_us() : 0;
+  uint64_t sdk_started = p->profile_sdk_us;
+#endif
   const SamsaStop stop =
       samsa_call_budget(&p->cpu, fn | 1, args, nargs, ret, prv_handler, nullptr, UINT32_MAX);
+#ifdef CONFIG_LINUX_WATCH
+  if (p->profile) {
+    uint64_t elapsed = posix_host_monotonic_us() - started;
+    if (elapsed > 50000) {
+      fprintf(stderr, "APP_PROFILE callback=%" PRIx32 " us=%" PRIu64 " sdk_us=%" PRIu64 "\n",
+              fn, elapsed, p->profile_sdk_us - sdk_started);
+      prv_profile_dump(p, "callback");
+    }
+  }
+#endif
   if (stop != SAMSA_STOP_RETURN) {
     prv_kill(p, prv_stop_name(stop));
   }
@@ -677,6 +750,13 @@ static void prv_reset(Process *p) {
   p->num_objs = 0;
   p->retaining = false;
   p->last_call = 0;
+#ifdef CONFIG_LINUX_WATCH
+  p->trace = getenv("PBL_APP_TRACE") != nullptr;
+  p->last_sdk_end = 0;
+  p->profile = getenv("PBL_APP_PROFILE") != nullptr;
+  p->profile_sdk_us = 0;
+  memset(p->profile_sdk, 0, sizeof(p->profile_sdk));
+#endif
 
   samsa_reset(&p->cpu);
   p->regions[0] = (SamsaRegion){

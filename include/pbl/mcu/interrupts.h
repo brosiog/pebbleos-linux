@@ -10,7 +10,7 @@
  * @ingroup mcu
  * @brief Exception and interrupt-mask state of the CPU.
  *
- * On host builds (unit tests) code never runs in an exception handler.
+ * POSIX builds report the simulated interrupt context of the host kernel.
  * @{
  */
 
@@ -40,7 +40,9 @@ bool mcu_state_are_interrupts_enabled(void);
 
 /** @} */
 
-#ifdef __arm__
+#if defined(CONFIG_SOC_POSIX)
+#include <pbl/mcu/interrupts_posix.inl.h>
+#elif defined(__arm__)
 #include <pbl/mcu/interrupts_arm.inl.h>
 #else
 #include <pbl/mcu/interrupts_stubs.inl.h>

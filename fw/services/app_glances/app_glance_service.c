@@ -87,8 +87,11 @@ static bool prv_find_current_glance(AppGlanceSliceInternal *slice, void *context
 }
 
 static void prv_glance_event_put(const Uuid *app_uuid) {
-  Uuid *app_uuid_copy = kernel_zalloc_check(sizeof(Uuid));
-  *app_uuid_copy = *app_uuid;
+  Uuid *app_uuid_copy = nullptr;
+  if (app_uuid) {
+    app_uuid_copy = kernel_zalloc_check(sizeof(Uuid));
+    *app_uuid_copy = *app_uuid;
+  }
 
   PebbleEvent e = (PebbleEvent){
     .type = PEBBLE_APP_GLANCE_EVENT,
@@ -115,7 +118,11 @@ static void prv_blob_db_event_handler(PebbleEvent *event, void *context) {
     return;
   }
 
-  prv_glance_event_put((Uuid *)blob_db_event->key);
+  if (blob_db_event->type == BlobDBEventTypeFlush) {
+    prv_glance_event_put(nullptr);
+  } else if (blob_db_event->key && blob_db_event->key_len == sizeof(Uuid)) {
+    prv_glance_event_put((Uuid *)blob_db_event->key);
+  }
 }
 
 static void prv_handle_app_cache_event(PebbleEvent *e, void *context) {

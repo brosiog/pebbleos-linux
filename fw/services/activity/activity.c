@@ -1103,6 +1103,8 @@ static void prv_collect_raw_samples(AccelRawData *accel_data, uint32_t num_sampl
   }
 }
 
+static void prv_update_step_metrics(AccelRawData *data, uint32_t num_samples);
+
 // ------------------------------------------------------------------------------------------------
 // Accel callback. Called from KernelBG task. Feeds new samples into the algorithm, saves
 // the updated step and sleep stats into our globals, and posts a service event if the steps
@@ -1114,7 +1116,25 @@ static void prv_accel_cb(AccelRawData *data, uint32_t num_samples, uint64_t time
   }
   // Have the algorithm process the samples from KernelBG
   activity_algorithm_handle_accel(data, num_samples, timestamp);
+  prv_update_step_metrics(data, num_samples);
+}
 
+// ------------------------------------------------------------------------------------------------
+void activity_handle_external_steps(uint16_t steps, uint32_t elapsed_ms) {
+  PBL_ASSERT_TASK(PebbleTask_KernelBackground);
+  if (!s_activity_state.started || s_activity_state.test_mode) {
+    return;
+  }
+  activity_algorithm_handle_external_steps(steps, elapsed_ms, rtc_get_time());
+  if (steps) {
+    prv_update_step_metrics(nullptr, 0);
+  }
+}
+
+// ------------------------------------------------------------------------------------------------
+// Copies the algorithm's step count and rate into our state after new data, and posts a service
+// event if the steps changed. Raw samples, if any, are logged when collection is enabled.
+static void prv_update_step_metrics(AccelRawData *data, uint32_t num_samples) {
   // Update our copy of the steps after grabbing the mutex. We guard these globals with a
   // mutex because activity_get_metric() provides access to the current metrics from any task.
   // The current sleep data is only recomputed every few minutes in order to reduce overhead and
@@ -1125,7 +1145,7 @@ static void prv_accel_cb(AccelRawData *data, uint32_t num_samples, uint64_t time
     activity_algorithm_get_steps(&s_activity_state.step_data.steps);
 
     // Are we logging raw accel samples?
-    if (s_activity_state.sample_collection_enabled) {
+    if (s_activity_state.sample_collection_enabled && num_samples) {
       prv_collect_raw_samples(data, num_samples, false /*finish*/);
     }
 

@@ -19,4 +19,8 @@ extern const struct pbl_vibe pbl_vibe_posix;
 /** @brief The native vibration motor. */
 #define POSIX_VIBE (&pbl_vibe_posix)
 
+#ifdef CONFIG_LINUX_WATCH
+int pbl_vibe_posix_start_timed(int8_t strength, uint16_t duration_ms);
+#endif
+
 /** @} */

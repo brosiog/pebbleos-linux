@@ -3,13 +3,24 @@
 
 #include <pbl/drivers/backlight.h>
 #include <pbl/drivers/backlight/posix.h>
+#ifdef CONFIG_LINUX_WATCH
+#include <pbl/drivers/linux_adapter_client.h>
+#endif
 
 static int prv_init(const struct pbl_backlight *bl) {
   return 0;
 }
 
 static int prv_set_brightness(const struct pbl_backlight *bl, uint8_t brightness) {
+#ifdef CONFIG_LINUX_WATCH
+  // Pebble's light service owns the timeout: level 0 means it expired.
+  if (!brightness)
+    return linux_adapter_display_idle(PBL_ADAPTER_REASON_TIMEOUT);
+  linux_adapter_backlight(brightness > 100 ? 100 : brightness);
+  return linux_adapter_display(PBL_ADAPTER_DISPLAY_ON, PBL_ADAPTER_REASON_USER);
+#else
   return 0;
+#endif
 }
 
 static const struct pbl_backlight_ops s_ops = {

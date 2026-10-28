@@ -57,8 +57,9 @@ static int prv_gatt_read_event_cb(uint16_t conn_handle, const struct ble_gatt_er
           .error_code = prv_gatt_error_code(error->status),
           .context = arg,
         },
-    .value = attr->om->om_data,
-    .value_length = attr->om->om_len,
+    // NimBLE may pass no attribute on a failed read.
+    .value = error->status == 0 && attr && attr->om ? attr->om->om_data : nullptr,
+    .value_length = error->status == 0 && attr && attr->om ? attr->om->om_len : 0,
   };
   pbl_bt_cb_gatt_client_operations_handle_response(&resp.hdr);
   return 0;

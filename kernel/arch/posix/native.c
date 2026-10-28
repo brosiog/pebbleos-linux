@@ -19,6 +19,8 @@
 
 static pthread_cond_t s_irq_cond = PTHREAD_COND_INITIALIZER;
 static uint64_t s_irq_count;
+static pthread_cond_t s_tick_cond = PTHREAD_COND_INITIALIZER;
+static bool s_cpu_idle;
 
 void posix_add_zombie(pthread_t tid) {
   pthread_detach(tid);
@@ -41,6 +43,9 @@ void pbl_posix_start(int (*entry)(void)) {
 void pbl_posix_irq_run(void (*isr)(void *), void *arg) {
   pthread_mutex_lock(&posix_cpu);
   posix_in_isr = true;
+  if (s_cpu_idle) {
+    pbl_posix_tick_sync(true);
+  }
   isr(arg);
   posix_in_isr = false;
   s_irq_count++;
@@ -58,11 +63,23 @@ void pbl_posix_cpu_wait(uint64_t timeout_us) {
   };
 
   uint64_t count = s_irq_count;
+  s_cpu_idle = true;
   while (s_irq_count == count) {
     if (pthread_cond_timedwait(&s_irq_cond, &posix_cpu, &deadline) == ETIMEDOUT) {
       break;
     }
   }
+  s_cpu_idle = false;
+  pthread_cond_signal(&s_tick_cond);
+  pbl_posix_tick_sync(true);
+}
+
+void pbl_posix_tick_wait(void) {
+  pthread_mutex_lock(&posix_cpu);
+  while (s_cpu_idle) {
+    pthread_cond_wait(&s_tick_cond, &posix_cpu);
+  }
+  pthread_mutex_unlock(&posix_cpu);
 }
 
 void arch_idle(pbl_tick_t max_ticks) {

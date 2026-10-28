@@ -84,7 +84,10 @@ static void prv_render_icon(GContext *ctx, Layer *base_layer) {
   GDrawCommandFrame *frame = gdraw_command_sequence_get_frame_by_index(
       data->pulsing_heart, data->pulsing_heart_frame_index);
   if (frame) {
-    const GPoint offset = GPoint(-1 + HEALTH_X_OFFSET, -23 + HEALTH_Y_OFFSET);
+    // Same round-bezel shift as the diamond (hr_summary_card_segments.h), or the heart sits off
+    // its center on round displays.
+    const GPoint offset = GPoint(-1 + HEALTH_X_OFFSET + PBL_IF_ROUND_ELSE(18, 0),
+                                 -23 + HEALTH_Y_OFFSET + PBL_IF_ROUND_ELSE(6, 0));
     gdraw_command_frame_draw(ctx, data->pulsing_heart, frame, offset);
     return;
   }

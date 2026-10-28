@@ -9,7 +9,9 @@
 #include <pbl/util/uuid.h>
 
 #include <applib/app_glance.h>
+#include <applib/event_service_client.h>
 #include <clar.h>
+#include <kernel/events.h>
 #include <kernel/pbl_malloc.h>
 #include <process_management/app_install_manager.h>
 #include <resource/resource_ids.auto.h>
@@ -21,6 +23,28 @@
 
 // Stubs
 ////////////////////////////////////////////////////////////////
+
+static EventServiceInfo *s_blob_event_info;
+static unsigned s_glance_event_count;
+static bool s_glance_has_uuid;
+static Uuid s_glance_uuid;
+
+void event_service_client_subscribe(EventServiceInfo *info) {
+  if (info->type == PEBBLE_BLOBDB_EVENT) {
+    s_blob_event_info = info;
+  }
+}
+
+void event_put(PebbleEvent *event) {
+  if (event->type == PEBBLE_APP_GLANCE_EVENT) {
+    s_glance_event_count++;
+    s_glance_has_uuid = event->app_glance.app_uuid != nullptr;
+    if (s_glance_has_uuid) {
+      s_glance_uuid = *event->app_glance.app_uuid;
+      kernel_free(event->app_glance.app_uuid);
+    }
+  }
+}
 
 status_t pfs_remove(const char *name) {
   fake_settings_file_reset();
@@ -35,6 +59,8 @@ status_t pfs_remove(const char *name) {
 ////////////////////////////////////////////////////////////////
 
 void test_app_glance_service__initialize(void) {
+  s_glance_event_count = 0;
+  s_glance_has_uuid = false;
   fake_settings_file_reset();
   app_glance_db_init();
   app_glance_service_init();
@@ -44,6 +70,37 @@ void app_glance_db_deinit(void);
 
 void test_app_glance_service__cleanup(void) {
   app_glance_db_deinit();
+}
+
+void test_app_glance_service__database_flush_notifies_without_uuid(void) {
+  PebbleEvent event = {
+    .type = PEBBLE_BLOBDB_EVENT,
+    .blob_db = {.db_id = BlobDBIdAppGlance, .type = BlobDBEventTypeFlush},
+  };
+  cl_assert(s_blob_event_info);
+  s_blob_event_info->handler(&event, s_blob_event_info->context);
+  cl_assert_equal_i(s_glance_event_count, 1);
+  cl_assert(!s_glance_has_uuid);
+}
+
+void test_app_glance_service__database_update_requires_complete_uuid(void) {
+  Uuid uuid = APP_GLANCE_TEST_UUID;
+  PebbleEvent event = {
+    .type = PEBBLE_BLOBDB_EVENT,
+    .blob_db = {
+      .db_id = BlobDBIdAppGlance,
+      .type = BlobDBEventTypeInsert,
+      .key = (uint8_t *)&uuid,
+      .key_len = sizeof(uuid) - 1
+    },
+  };
+  s_blob_event_info->handler(&event, s_blob_event_info->context);
+  cl_assert_equal_i(s_glance_event_count, 0);
+  event.blob_db.key_len = sizeof(uuid);
+  s_blob_event_info->handler(&event, s_blob_event_info->context);
+  cl_assert_equal_i(s_glance_event_count, 1);
+  cl_assert(s_glance_has_uuid);
+  cl_assert(uuid_equal(&uuid, &s_glance_uuid));
 }
 
 static void prv_check_expected_slice_data(const AppGlanceSliceInternal *expected_slice_data,

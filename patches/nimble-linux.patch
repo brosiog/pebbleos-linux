@@ -1,0 +1,33 @@
+diff --git a/nimble/transport/common/hci_h4/src/hci_h4.c b/nimble/transport/common/hci_h4/src/hci_h4.c
+index fd89154..74d8696 100644
+--- a/nimble/transport/common/hci_h4/src/hci_h4.c
++++ b/nimble/transport/common/hci_h4/src/hci_h4.c
+@@ -169,6 +169,11 @@ hci_h4_sm_w4_header(struct hci_h4_sm *h4sm, struct hci_h4_input_buffer *ib)
+ 
+         h4sm->exp_len = h4sm->hdr[1] + 2;
+         if (h4sm->exp_len > MYNEWT_VAL(BLE_TRANSPORT_EVT_SIZE)) {
++            /* Not retryable; free it so a retry does not leak a buffer */
++            if (h4sm->buf) {
++                ble_transport_free(h4sm->buf);
++                h4sm->buf = NULL;
++            }
+             return -1;
+         }
+         break;
+@@ -289,7 +294,7 @@ hci_h4_sm_rx(struct hci_h4_sm *h4sm, const uint8_t *buf, uint16_t len)
+         /* no break */
+         case HCI_H4_SM_W4_HEADER:
+             rc = hci_h4_sm_w4_header(h4sm, &ib);
+-            assert(rc >= 0);
++            /* rc < 0 is out of buffers: the caller retries once one is freed */
+             if (rc) {
+                 break;
+             }
+@@ -297,7 +302,6 @@ hci_h4_sm_rx(struct hci_h4_sm *h4sm, const uint8_t *buf, uint16_t len)
+         /* no break */
+         case HCI_H4_SM_W4_PAYLOAD:
+             rc = hci_h4_sm_w4_payload(h4sm, &ib);
+-            assert(rc >= 0);
+             if (rc) {
+                 break;
+             }

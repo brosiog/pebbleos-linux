@@ -307,6 +307,39 @@ void test_music_endpoint__no_art_response_latches_generation(void) {
   cl_assert_equal_i(event.media.type, PebbleMediaEventTypeAlbumArtUpdated);
 }
 
+void test_music_endpoint__ams_metadata_invalidates_album_art(void) {
+  cl_assert(!music_album_art_is_current());
+  music_update_now_playing("first", 5, "artist", 6, "album", 5);
+  music_set_album_art(nullptr, music_get_now_playing_generation());
+  cl_assert(music_album_art_is_current());
+  uint8_t generation = music_get_now_playing_generation();
+
+  music_update_track_title("second", 6);
+  cl_assert_equal_i(music_get_now_playing_generation(), (uint8_t)(generation + 1));
+  cl_assert(!music_album_art_is_current());
+  music_set_album_art(nullptr, music_get_now_playing_generation());
+  generation = music_get_now_playing_generation();
+  music_update_track_title("second", 6);
+  music_update_player_name("Phone", 5);
+  cl_assert_equal_i(music_get_now_playing_generation(), generation);
+  cl_assert(music_album_art_is_current());
+
+  music_update_track_artist("other", 5);
+  cl_assert(!music_album_art_is_current());
+  music_set_album_art(nullptr, music_get_now_playing_generation());
+  music_update_track_album("other album", 11);
+  cl_assert(!music_album_art_is_current());
+}
+
+void test_music_endpoint__album_art_generation_wrap_does_not_latch(void) {
+  music_update_now_playing("first", 5, "artist", 6, "album", 5);
+  music_set_album_art(nullptr, music_get_now_playing_generation());
+  for (unsigned i = 0; i < 256; ++i) {
+    music_update_track_title(i & 1 ? "first" : "other", 5);
+  }
+  cl_assert(!music_album_art_is_current());
+}
+
 void test_music_endpoint__held_art_is_released_when_transfer_starts(void) {
   music_update_now_playing("first", 5, "artist", 6, "album", 5);
   music_set_album_art(prv_make_album_art(), music_get_now_playing_generation());

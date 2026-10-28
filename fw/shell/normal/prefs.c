@@ -331,6 +331,9 @@ static uint8_t s_timeline_peek_unsupported_face_mode = TimelinePeekUnsupportedFa
 #ifdef CONFIG_APP_SCALING
 #define PREF_KEY_LEGACY_APP_RENDER_MODE "legacyAppRenderMode"
 #endif
+#ifdef CONFIG_LINUX_WATCH
+#define PREF_KEY_AMBIENT_CLOCK_MODE "ambientClockMode"
+#endif
 static bool s_coredump_on_request_enabled = false;
 static bool s_accel_shake_log_info_enabled = false;
 static bool s_vibe_log_info_enabled = false;
@@ -339,6 +342,9 @@ static bool s_als_threshold_migrated_v1 = false;
 static bool s_als_threshold_migrated_v2 = false;
 #ifdef CONFIG_APP_SCALING
 static uint8_t s_legacy_app_render_mode = 1; // Default to scaled mode
+#endif
+#ifdef CONFIG_LINUX_WATCH
+static uint8_t s_ambient_clock_mode = AmbientClockMode_Off;
 #endif
 
 #ifdef CONFIG_THEMING
@@ -917,6 +923,16 @@ static bool prv_set_s_legacy_app_render_mode(uint8_t *mode) {
     return false; // Invalid value
   }
   s_legacy_app_render_mode = *mode;
+  return true;
+}
+#endif
+
+#ifdef CONFIG_LINUX_WATCH
+static bool prv_set_s_ambient_clock_mode(uint8_t *mode) {
+  if (*mode >= AmbientClockModeCount) {
+    return false;
+  }
+  s_ambient_clock_mode = *mode;
   return true;
 }
 #endif
@@ -2345,6 +2361,17 @@ bool shell_prefs_get_settings_dbs_compacted_v1(void) {
 void shell_prefs_set_settings_dbs_compacted_v1(bool done) {
   prv_pref_set(PREF_KEY_SETTINGS_DBS_COMPACTED_V1, &done, sizeof(done));
 }
+
+#ifdef CONFIG_LINUX_WATCH
+AmbientClockMode shell_prefs_get_ambient_clock_mode(void) {
+  return (AmbientClockMode)s_ambient_clock_mode;
+}
+
+void shell_prefs_set_ambient_clock_mode(AmbientClockMode mode) {
+  uint8_t mode_value = (uint8_t)mode;
+  prv_pref_set(PREF_KEY_AMBIENT_CLOCK_MODE, &mode_value, sizeof(mode_value));
+}
+#endif
 
 #ifdef CONFIG_APP_SCALING
 LegacyAppRenderMode shell_prefs_get_legacy_app_render_mode(void) {

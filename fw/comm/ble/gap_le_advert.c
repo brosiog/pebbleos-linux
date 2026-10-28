@@ -53,7 +53,12 @@ PBL_LOG_MODULE_DECLARE(bt, CONFIG_BT_LOG_LEVEL);
 // Values comply with Apple Accessory Design Guidelines.
 static const uint32_t s_interval_ms[] = {
   [GAPLEAdvertisingInterval_Short] = 20,  // 20ms
+#ifdef CONFIG_BT_HCI_LINUX
+  // NimBLE truncates to 0.625ms units: 1023ms encodes the required 1022.5ms (1636 units).
+  [GAPLEAdvertisingInterval_Long] = 1023,
+#else
   [GAPLEAdvertisingInterval_Long] = 1022, // 1022.5ms (truncated to ms)
+#endif
 };
 
 typedef struct GAPLEAdvertisingJob {

@@ -60,7 +60,16 @@ foreach(depth_platform 8bit:emery 1bit:flint)
     )
   endforeach()
 endforeach()
+
+# Frame buffer capture also has round-display behavior.
 set(BIT_DEPTH_NAME 8bit)
+pbl_clar_test(test_graphics_context_8bit
+  SOURCE ${CMAKE_CURRENT_BINARY_DIR}/test_graphics_context_8bit.c
+  SOURCES ${graphics_sources} fw/board/displays/display_gabbro.c
+  PLATFORMS gabbro
+  INCLUDES ${CMAKE_CURRENT_SOURCE_DIR}
+  TEST_IMAGES
+)
 
 set(graphics_draw_text_sources
   fw/applib/graphics/8_bit/framebuffer.c

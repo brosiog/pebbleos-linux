@@ -1,0 +1,24 @@
+{
+  "upstream": "https://github.com/coredevices/PebbleOS",
+  "workspace_base_commit": "f7970c34522cb34294cb980e9a72880a2999d599",
+  "submodules": {
+    "third_party/cmsis_core/CMSIS": "55b19837f5703e418ca37894d5745b1dc05e4c91",
+    "third_party/fff/fff": "5111c61e1ef7848e3afd3550044a8cf4405f4199",
+    "third_party/hal_nordic/nrfx": "bacc23e5387964462e5638f0c914c2ab5802fa3c",
+    "third_party/hal_sifli/SiFli-SDK": "1f7536a53379207a048a846a804c2eefe165ebe1",
+    "third_party/mbedtls/mbedtls": "068ff080b369adfac81509f9b57b2afabaf82dc5",
+    "third_party/moddable/moddable": "e596714f69483f6003a6acdd5c63df0067b8dd9f",
+    "third_party/nanopb/nanopb": "cad3c18ef15a663e30e3e43e3a752b66378adec1",
+    "third_party/nimble/mynewt-nimble": "56441c054f9365b337db7a76ade8a134737da4e1",
+    "third_party/nonfree/pebbleos-nonfree": "92d088674bf10bee71709b7b0d8d258d56d2770e",
+    "third_party/picolibc": "2cb62b35aaf461e730860cb7ecc31c51b9848d78",
+    "third_party/qr_code_generator/QR-Code-generator": "2c9044de6b049ca25cb3cd1649ed7e27aa055138",
+    "third_party/resources/iconography": "99e2660ccd8c0c98e596612bb1c21700e28156b3",
+    "third_party/samsa/samsa": "80f246c809f60ab14e21528095b1873e9684d092",
+    "third_party/speex/speex": "05895229896dc942d453446eba6f9f5ddcf95422",
+    "third_party/tinymt/TinyMT": "fabd14128db25498d6d3baf9cd25e15983bc12fd",
+    "third_party/upng/upng": "0da81ad1f352b59863eb54af9cdad8884c746722",
+    "third_party/uzlib/uzlib": "99ec014835613d7161dc010c882513a389d32fa7"
+  },
+  "hardware_validation": "pending"
+}

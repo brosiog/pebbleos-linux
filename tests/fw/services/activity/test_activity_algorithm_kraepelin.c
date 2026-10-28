@@ -961,3 +961,43 @@ void test_activity_algorithm_kraepelin__minute_data_steps_during_sleep(void) {
     cl_assert_equal_i(retrieve[i].heart_rate_bpm, minute_data[i].heart_rate_bpm);
   }
 }
+
+// ---------------------------------------------------------------------------------------
+// While a hardware pedometer reports, accelerometer steps are ignored and its steps are used.
+void test_activity_algorithm_kraepelin__external_steps(void) {
+  AccelRawData samples[25] = {};
+  uint32_t steps;
+  time_t now = rtc_get_time();
+  s_alg_next_steps = 10;
+  activity_algorithm_handle_accel(samples, 25, (uint64_t)now * 1000);
+  activity_algorithm_get_steps(&steps);
+  cl_assert_equal_i(steps, 10);
+
+  // A zero report (heartbeat) is enough to switch the source.
+  activity_algorithm_handle_external_steps(0, 0, now);
+  activity_algorithm_handle_accel(samples, 25, (uint64_t)now * 1000);
+  activity_algorithm_get_steps(&steps);
+  cl_assert_equal_i(steps, 10);
+
+  activity_algorithm_handle_external_steps(300, 150000, now);
+  activity_algorithm_get_steps(&steps);
+  cl_assert_equal_i(steps, 310);
+  uint16_t rate_steps;
+  uint32_t rate_ms;
+  time_t rate_end;
+  activity_algorithm_get_step_rate(&rate_steps, &rate_ms, &rate_end);
+  cl_assert_equal_i(rate_steps, 300);
+  cl_assert_equal_i(rate_ms, 150000);
+  cl_assert_equal_i(rate_end, now);
+
+  // Samples delivered late, from just before the report, are still covered.
+  activity_algorithm_handle_accel(samples, 25, (uint64_t)(now - 30) * 1000);
+  activity_algorithm_get_steps(&steps);
+  cl_assert_equal_i(steps, 310);
+
+  // The pedometer went quiet for 5 minutes: back to the accelerometer.
+  activity_algorithm_handle_accel(samples, 25, (uint64_t)(now + 5 * PBL_SEC_PER_MIN) * 1000);
+  activity_algorithm_get_steps(&steps);
+  cl_assert_equal_i(steps, 320);
+  s_alg_next_steps = 0;
+}

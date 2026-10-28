@@ -148,6 +148,11 @@ static void prv_log_kernel_queue_contents(void) {
 static void prv_log_event_put_failure(const char *queue_name, uintptr_t saved_lr,
                                       const PebbleEvent *event) {
   PBL_LOG_ERR("Error, %s queue full. Type %u", queue_name, event->type);
+#ifdef CONFIG_LINUX_WATCH
+  PBL_LOG_ERR("Queue producer=%p active_event=%p dropped=%p", (void *)saved_lr,
+              (void *)(uintptr_t)s_current_event,
+              (void *)(uintptr_t)prv_get_fancy_type_from_event(event));
+#endif
   prv_log_kernel_queue_contents();
 
   RebootReason reason = {
@@ -227,6 +232,10 @@ void event_put(PebbleEvent *event) {
   } else {
     return prv_event_put(&s_kernel_event_queue, "kernel", saved_lr, event);
   }
+}
+
+uint32_t event_kernel_queue_num_free(void) {
+  return pbl_msgq_num_free(&s_kernel_event_queue);
 }
 
 void event_put_isr(PebbleEvent *event) {

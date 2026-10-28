@@ -76,7 +76,13 @@
 #define PBL_UNSORTED_SECTION_START(name) __asm("section$start$__DATA_CONST$__" #name)
 #define PBL_UNSORTED_SECTION_END(name)   __asm("section$end$__DATA_CONST$__" #name)
 #else
-#define PBL_UNSORTED_SECTION(name)       PBL_SECTION_IMPL(#name) PBL_NO_SANITIZE_ADDRESS
+#if defined(__ELF__) && __has_attribute(retain)
+// Runtime registries must survive section GC even when bounds are weak symbols.
+#define PBL_UNSORTED_SECTION(name) \
+  PBL_SECTION_IMPL(#name) __attribute__((__retain__)) PBL_NO_SANITIZE_ADDRESS
+#else
+#define PBL_UNSORTED_SECTION(name) PBL_SECTION_IMPL(#name) PBL_NO_SANITIZE_ADDRESS
+#endif
 // ELF linkers only define the bounds of a section that exists
 #define PBL_UNSORTED_SECTION_START(name) __asm("__start_" #name) PBL_WEAK
 #define PBL_UNSORTED_SECTION_END(name)   __asm("__stop_" #name) PBL_WEAK

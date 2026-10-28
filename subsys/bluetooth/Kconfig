@@ -54,6 +54,14 @@ config BT_HCI_FAKE
       event. The host synchronises and the GATT server runs, but no link
       can be established. For targets without a radio, such as QEMU.
 
+config BT_HCI_LINUX
+    bool "Linux HCI user channel"
+    depends on LINUX_WATCH
+    help
+      Run NimBLE against an exclusively owned Linux Bluetooth controller.
+      Pass -b hci:0 and bring the stock controller down before starting.
+      The native UART backend preserves H4 packet boundaries on the socket.
+
 endchoice
 
 choice BT_ID_ADDR_SOURCE

@@ -38,8 +38,15 @@ config ACCEL_QEMU
 
 config ACCEL_POSIX
     bool "POSIX"
+    default y if SOC_POSIX && !LINUX_WATCH
     help
       Accelerometer of a native build: a watch lying still, face up.
+
+config ACCEL_LINUX_WATCH
+    bool "Linux watch sensor adapter"
+    depends on LINUX_WATCH
+    help
+      Real accelerometer batches from the installed Samsung sensor service.
 
 endif # ACCEL
 

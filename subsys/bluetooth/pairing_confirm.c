@@ -19,5 +19,8 @@ void pbl_bt_pairing_confirm(const struct pbl_bt_pairing_confirm_ctx *ctx, bool i
   };
   int rc = ble_sm_inject_io(conn_handle, &key);
 
+#ifdef CONFIG_BT_HCI_LINUX
+  PBL_LOG_INFO("Pairing comparison response: accepted=%u rc=0x%04x", is_confirmed, (uint16_t)rc);
+#endif
   PBL_LOG_DBG("ble_sm_inject_io rc=0x%04x", (uint16_t)rc);
 }

@@ -8,6 +8,9 @@
 #endif
 
 #include <pbl/drivers/battery.h>
+#ifdef CONFIG_BATTERY_LINUX
+#include <pbl/drivers/battery/linux.h>
+#endif
 #include <pbl/kernel/assert.h>
 #include <pbl/kernel/syscall.h>
 #include <pbl/logging/logging.h>
@@ -184,6 +187,12 @@ static void prv_update_state(void *force_update) {
 
   uint32_t new_charge_percent =
       battery_curve_sample_ratio32_charge_percent(s_last_battery_state.voltage, charging);
+#ifdef CONFIG_BATTERY_LINUX
+  int measured_percent = battery_linux_get_percent();
+  if (measured_percent >= 0) {
+    new_charge_percent = pbl_ratio32_from_percent(measured_percent);
+  }
+#endif
   // Allow updates iff:
   // - We are charging
   // - We are discharging and:
@@ -278,6 +287,10 @@ BatteryChargeState battery_get_charge_state(void) {
   int32_t percent = MIN((int32_t)qemu_battery_get_percent(), 100);
   int32_t percent_normalized = percent;
   uint8_t charge_percent = (uint8_t)percent;
+#elif defined(CONFIG_BATTERY_LINUX)
+  // Samsung's fuel gauge already accounts for the battery's usable reserve.
+  int32_t percent_normalized = MIN((int32_t)pbl_ratio32_to_percent(s_last_battery_state.percent), 100);
+  uint8_t charge_percent = (uint8_t)percent_normalized;
 #else
   int32_t percent = pbl_ratio32_to_percent(s_last_battery_state.percent);
 

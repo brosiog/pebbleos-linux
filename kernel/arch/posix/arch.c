@@ -27,7 +27,7 @@ bool posix_in_isr;
 static void prv_exit(struct posix_thread *pt) {
   pthread_cond_destroy(&pt->wake);
   free(pt);
-  pthread_mutex_unlock(&posix_cpu);
+  // pthread_exit runs prv_release_cpu; releasing here would unlock twice.
   pthread_exit(nullptr);
 }
 
@@ -40,7 +40,7 @@ void posix_park(struct posix_thread *pt) {
   }
 }
 
-// A cancelled thread leaves its condition wait owning posix_cpu; give it back.
+// Both normal exit and cancellation leave posix_cpu held; release it once.
 static void prv_release_cpu(void *arg) {
   (void)arg;
   pthread_mutex_unlock(&posix_cpu);
@@ -109,7 +109,6 @@ void arch_switch_request(void) {
 
 void arch_thread_exit(void) {
   // pbl_thread_abort() already switched away and ended this pthread.
-  pthread_mutex_unlock(&posix_cpu);
   pthread_exit(nullptr);
 }
 

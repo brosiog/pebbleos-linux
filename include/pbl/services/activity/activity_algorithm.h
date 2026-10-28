@@ -240,6 +240,18 @@ void activity_algorithm_handle_accel(AccelRawData *data, uint32_t num_samples,
                                      uint64_t timestamp_ms);
 
 /**
+ * @brief Add steps counted by a hardware pedometer.
+ *
+ * While a pedometer keeps reporting (at least every few minutes, zero steps included), steps
+ * the algorithm finds in accelerometer data are ignored, so nothing is counted twice.
+ *
+ * @param steps New steps since the previous report.
+ * @param elapsed_ms Time over which they were taken.
+ * @param utc_sec Report time.
+ */
+void activity_algorithm_handle_external_steps(uint16_t steps, uint32_t elapsed_ms, time_t utc_sec);
+
+/**
  * @brief Collect and log the stats of the last minute.
  *
  * Called once per minute. The minute data is mostly used to compute sleep.

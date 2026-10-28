@@ -284,4 +284,35 @@ static int prv_cmd_airplane(const struct pbl_shell *sh, size_t argc, char **argv
 }
 
 PBL_SHELL_SUBCMD_ADD(sub_bt, airplane, nullptr, "Airplane mode <on|off>", prv_cmd_airplane, 2, 0);
+
+#ifdef CONFIG_BT_HCI_LINUX
+static int prv_cmd_linux_radio(const struct pbl_shell *sh, size_t argc, char **argv) {
+  if (argc == 2) {
+    if (strcmp(argv[1], "on") == 0) {
+      bt_ctl_set_airplane_mode_async(false);
+      bt_ctl_set_override_mode(BtCtlModeOverrideNone);
+    } else if (strcmp(argv[1], "off") == 0) {
+      bt_ctl_set_airplane_mode_async(true);
+    } else {
+      return -EINVAL;
+    }
+  }
+  pbl_shell_print(sh, "Initialized=%u enabled=%u airplane=%u override=%u running=%u",
+                  s_comm_initialized, s_comm_enabled, s_comm_airplane_mode_on, s_comm_override,
+                  s_comm_is_running);
+  return 0;
+}
+
+PBL_SHELL_SUBCMD_ADD(sub_bt, linux_radio, nullptr, "Linux radio policy [on|off]",
+                     prv_cmd_linux_radio, 1, 1);
+
+static int prv_cmd_linux_discoverable(const struct pbl_shell *sh, size_t argc, char **argv) {
+  bt_pairability_use_ble_for_period(300);
+  pbl_shell_print(sh, "BLE discovery enabled for five minutes; saved bonds retained");
+  return 0;
+}
+
+PBL_SHELL_SUBCMD_ADD(sub_bt, linux_discoverable, nullptr, "Enable BLE discovery for five minutes",
+                     prv_cmd_linux_discoverable, 1, 0);
+#endif
 #endif

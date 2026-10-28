@@ -120,7 +120,7 @@ skip_sanity_check = true
     message(FATAL_ERROR "picolibc build did not produce picolibc.specs")
   endif()
   # The firmware needs the same 32-bit time_t override picolibc built with.
-  pbl_libc_add_flags("SHELL:-include ${override}")
+  pbl_libc_add_flags("SHELL:-include \"${override}\"")
   set(${out} ${specs} PARENT_SCOPE)
 endfunction()
 

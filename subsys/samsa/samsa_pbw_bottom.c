@@ -48,7 +48,11 @@ static void prv_poll(void) {
   }
 }
 
-POSIX_HOST_HOOK(.poll = prv_poll)
+static unsigned prv_poll_timeout_ms(void) {
+  return s_num_pending ? 10 : 60000;
+}
+
+POSIX_HOST_HOOK(.poll = prv_poll, .poll_timeout_ms = prv_poll_timeout_ms)
 
 static void prv_install_file(const char *path) {
   FILE *f = fopen(path, "rb");

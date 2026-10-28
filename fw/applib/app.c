@@ -12,6 +12,9 @@
 #include <process_state/app_state/app_state.h>
 #include <syscall/syscall.h>
 #include <system/profiler.h>
+#ifdef CONFIG_LINUX_WATCH
+#include <pbl/drivers/display/linux.h>
+#endif
 
 static void prv_render_app(void) {
   WindowStack *stack = app_state_get_window_stack();
@@ -79,6 +82,12 @@ static PBL_NOINLINE void event_loop_upkeep(void) {
   }
 
   // Check to see if handling the previous event requires us to rerender ourselves.
+#ifdef CONFIG_LINUX_WATCH
+  // Keep dirty windows pending while the panel is idle. Wake queues a fresh render request.
+  if (!display_linux_is_interactive()) {
+    return;
+  }
+#endif
   if (prv_app_is_render_scheduled() && !*app_state_get_framebuffer_render_pending()) {
     prv_render_app();
   }

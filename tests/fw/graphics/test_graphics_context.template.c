@@ -6,6 +6,8 @@
 #include <pbl/kernel/compiler.h>
 
 #include <clar.h>
+#include <string.h>
+#include <pbl/util/bitops.h>
 #include "util.h"
 
 
@@ -816,12 +818,36 @@ void test_graphics_context_${BIT_DEPTH_NAME}__lock_framebuffer_fails_from_8BitCi
   cl_assert_equal_p(bmp, nullptr);
 };
 
-void test_graphics_context_${BIT_DEPTH_NAME}__lock_framebuffer_1Bit_on_8BitCircular_must_fail(void) {
-  // Test for locking of 1Bit framebuffer when frambuffer is 8Bit Circular
-  GContext ctx = {.dest_bitmap.info.format = GBitmapFormat8BitCircular};
+void test_graphics_context_${BIT_DEPTH_NAME}__lock_framebuffer_1Bit_on_8BitCircular(void) {
+#if CONFIG_SCREEN_COLOR_DEPTH_BITS == 8 && PBL_ROUND
+  // Apps written for 1-bit drawing get a converted copy on round displays too.
+  GBitmap *native = gbitmap_create_blank(GSize(DISP_COLS, DISP_ROWS), GBitmapFormat8BitCircular);
+  cl_assert(native);
+  const int y = DISP_ROWS / 2;
+  const GBitmapDataRowInfo row = gbitmap_get_data_row_info(native, y);
+  memset(row.data + row.min_x, GColorBlackARGB8, row.max_x - row.min_x + 1);
+  row.data[DISP_COLS / 2] = GColorWhiteARGB8;
+  FrameBuffer fb = {.size = GSize(DISP_COLS, DISP_ROWS)};
+  GContext ctx = {.dest_bitmap = *native, .parent_framebuffer = &fb};
+
   GBitmap *bmp = graphics_capture_frame_buffer_format(&ctx, GBitmapFormat1Bit);
+  cl_assert(bmp);
+  cl_assert(ctx.lock == true);
+  cl_assert_equal_i(gbitmap_get_format(bmp), GBitmapFormat1Bit);
+  const uint8_t *line = (const uint8_t *)bmp->addr + y * bmp->row_size_bytes;
+  cl_assert(pbl_bitset8_get(line, DISP_COLS / 2));
+  cl_assert(!pbl_bitset8_get(line, DISP_COLS / 2 + 1));
+
+  // Drawing in 1-bit and releasing writes the result back to the round frame buffer.
+  pbl_bitset8_set((uint8_t *)line, DISP_COLS / 2 + 1);
+  cl_assert(graphics_release_frame_buffer(&ctx, bmp));
   cl_assert(ctx.lock == false);
-  cl_assert_equal_p(bmp, nullptr);
+  cl_assert_equal_i(ctx.dest_bitmap.addr == native->addr, true);
+  const GBitmapDataRowInfo after = gbitmap_get_data_row_info(&ctx.dest_bitmap, y);
+  cl_assert_equal_i(after.data[DISP_COLS / 2 + 1], GColorWhiteARGB8);
+  cl_assert_equal_i(after.data[DISP_COLS / 2 - 1], GColorBlackARGB8);
+  gbitmap_destroy(native);
+#endif
 };
 
 void test_graphics_context_${BIT_DEPTH_NAME}__lock_framebuffer_2BitPalette_must_fail(void) {

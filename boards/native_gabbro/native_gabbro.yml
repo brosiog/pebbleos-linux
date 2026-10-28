@@ -3,3 +3,5 @@
 
 variants:
   - wasm
+  - galaxy_watch3
+  - galaxy_watch3_arm32

@@ -1,6 +1,7 @@
 /* SPDX-FileCopyrightText: 2026 Core Devices LLC */
 /* SPDX-License-Identifier: Apache-2.0 */
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -34,6 +35,8 @@ static PBL_SEM_DEFINE(s_rx_ready, 0, 1);
 static PBL_SEM_DEFINE(s_acl_pool_avail, 0, 1);
 static PBL_MUTEX_DEFINE(s_tx_mutex);
 static struct hci_h4_sm s_hci_h4sm;
+// How long (in 100 ms waits) an out-of-buffers stall may last before resyncing.
+#define HCI_RX_MAX_STALLS 50
 
 // Filled by the UART ISR, drained by the HCI task.
 static uint8_t s_rx_ring[RX_RING_SIZE];
@@ -61,6 +64,12 @@ static os_error_t prv_acl_put_signal(struct os_mempool_ext *mpe, void *data, voi
 
 static void *prv_alloc_evt(int discardable) {
   void *buf;
+
+#ifdef CONFIG_BT_HCI_LINUX
+  // H4 can retain the previous LE subevent in hdr[2] for a non-LE event.
+  // Never discard a controller disconnect/command event on that stale hint.
+  discardable = 0;
+#endif
 
   // The H4 state machine drops a discardable event without a buffer, but takes
   // NULL for any other as a fatal framing error: wait for the host to free one.
@@ -106,7 +115,22 @@ static void prv_rx_irq_handler(UARTDevice *dev, uint8_t data, const UARTRXErrorF
   pbl_sem_give(&s_rx_ready);
 }
 
+// Drops a partially received packet and restarts framing at the next byte.
+static void prv_reset_h4(void) {
+  if (s_hci_h4sm.state != 0) {
+    if (s_hci_h4sm.pkt_type == HCI_H4_ACL || s_hci_h4sm.pkt_type == HCI_H4_ISO) {
+      if (s_hci_h4sm.om) {
+        os_mbuf_free_chain(s_hci_h4sm.om);
+      }
+    } else if (s_hci_h4sm.buf) {
+      ble_transport_free(s_hci_h4sm.buf);
+    }
+  }
+  hci_h4_sm_init(&s_hci_h4sm, &s_hci_h4_allocs_from_ll, prv_hci_frame_cb);
+}
+
 static void prv_hci_task_main(void *unused) {
+  unsigned stalls = 0;
   while (true) {
     pbl_sem_take(&s_rx_ready, PBL_FOREVER);
 
@@ -117,9 +141,18 @@ static void prv_hci_task_main(void *unused) {
 
       int consumed = hci_h4_sm_rx(&s_hci_h4sm, &s_rx_ring[tail], len);
       if (consumed <= 0) {
-        PBL_LOG_ERR("hci_h4_sm_rx returned %d", consumed);
+        // Out of buffers mid-packet: the state machine resumes where it stopped once the host
+        // frees one, so keep the bytes. The UART stays paused meanwhile.
+        if (++stalls < HCI_RX_MAX_STALLS) {
+          (void)pbl_sem_take(&s_acl_pool_avail, PBL_MSEC(100));
+          continue;
+        }
+        PBL_LOG_ERR("hci_h4_sm_rx stalled (%d); dropping %" PRIu32 " bytes to resync", consumed,
+                    len);
+        prv_reset_h4();
         consumed = len;
       }
+      stalls = 0;
       s_rx_tail = (tail + consumed) % RX_RING_SIZE;
 
       if (s_rx_paused) {

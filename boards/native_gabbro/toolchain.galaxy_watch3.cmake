@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: Apache-2.0
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
+find_program(PBL_ZIG_EXECUTABLE zig REQUIRED)
+set(CMAKE_C_COMPILER ${PBL_ZIG_EXECUTABLE})
+set(CMAKE_C_COMPILER_ARG1 "cc -target aarch64-linux-musl")
+set(CMAKE_ASM_COMPILER ${CMAKE_C_COMPILER})
+set(CMAKE_ASM_COMPILER_ARG1 "cc -target aarch64-linux-musl")
+set(CMAKE_AR ${PBL_ZIG_EXECUTABLE})
+set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> ar qc <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_C_ARCHIVE_FINISH "")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-static -pthread")
+# Zig's optimized modes otherwise disable the firmware's libc assertions.
+set(CMAKE_C_FLAGS_INIT "-UNDEBUG -fno-sanitize=undefined")
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)

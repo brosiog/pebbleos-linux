@@ -18,7 +18,7 @@
 
 PBL_SYSCALL(int, sys_test, (VAL, int, arg)) {
   uint32_t ipsr = 0;
-#ifdef __arm__
+#if defined(__arm__) && !defined(CONFIG_SOC_POSIX)
   __asm volatile("mrs %0, ipsr" : "=r"(ipsr));
 #endif
 

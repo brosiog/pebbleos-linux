@@ -534,6 +534,16 @@ bool activity_is_initialized(void);
 bool activity_start_tracking(bool test_mode);
 
 /**
+ * @brief Report steps counted by a hardware pedometer.
+ *
+ * Must be called from KernelBG. Ignored while tracking is stopped.
+ *
+ * @param steps New steps since the previous report; 0 reports that the pedometer is active.
+ * @param elapsed_ms Time over which they were taken.
+ */
+void activity_handle_external_steps(uint16_t steps, uint32_t elapsed_ms);
+
+/**
  * @brief Stop activity tracking.
  *
  * Tracking stops asynchronously on KernelBG.

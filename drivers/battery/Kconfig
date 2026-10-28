@@ -26,4 +26,10 @@ config BATTERY_POSIX
     help
       Battery driver for a native build (fixed values).
 
+config BATTERY_LINUX
+    bool "Linux power supply battery"
+    depends on LINUX_WATCH
+    help
+      Read measured voltage, state of charge and external power from sysfs.
+
 endif # BATTERY

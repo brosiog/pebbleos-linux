@@ -26,10 +26,14 @@ struct posix_host_option {
 struct posix_host_hook {
   //! Before the firmware starts, or NULL.
   void (*init)(void);
-  //! On every turn of the main loop: at least every 10 ms, or once woken. NULL for none.
+  //! On every turn of the main loop, or once woken. NULL for none.
   void (*poll)(void);
   //! When quitting, or NULL.
   void (*exit)(void);
+  //! Native Linux: readable descriptors to wake for, ending with -1.
+  int (*poll_fd)(unsigned index);
+  //! Native Linux: maximum time to the next poll; defaults to 10 ms.
+  unsigned (*poll_timeout_ms)(void);
 };
 
 void posix_host_option_register(const struct posix_host_option *option);
@@ -71,3 +75,8 @@ const char *posix_host_exe_dir(void);
 
 //! Starts the firmware on a thread of its own. Implemented by the firmware.
 void posix_fw_start(void);
+
+//! Called from the fault signal handler with the faulting pc and lr. Returns
+//! where the faulting thread should resume to be killed, or 0 to exit the
+//! process. Implemented by the firmware; async-signal context.
+uintptr_t posix_host_fault_landing(uintptr_t pc, uintptr_t lr);

@@ -18,6 +18,8 @@ Two classes carry design notes worth reading before changing them:
 :maxdepth: 1
 
 device_model.md
+linux_adapter_protocol.md
+linux_device_profile.md
 crc/index.md
 ```
 

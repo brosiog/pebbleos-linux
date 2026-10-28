@@ -362,6 +362,10 @@ static void prv_decline_click_handler(ClickRecognizerRef recognizer, void *ctx) 
 }
 
 static void prv_user_confirmation_click_config_provider(void *unused) {
+#ifdef CONFIG_BUTTON_LINUX_EVDEV
+  window_single_click_subscribe(BUTTON_ID_SELECT, prv_confirm_click_handler);
+  window_single_click_subscribe(BUTTON_ID_BACK, prv_decline_click_handler);
+#endif
   window_single_click_subscribe(BUTTON_ID_UP, prv_confirm_click_handler);
   window_single_click_subscribe(BUTTON_ID_DOWN, prv_decline_click_handler);
 }

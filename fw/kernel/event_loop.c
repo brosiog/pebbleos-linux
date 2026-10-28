@@ -170,6 +170,25 @@ static void back_button_force_quit_handler(void *data) {
   launcher_task_add_callback(launcher_force_quit_app, nullptr);
 }
 
+#ifdef CONFIG_LINUX_WATCH
+// Events waiting for the app beyond which new presses are not forwarded; the rest of its queue
+// stays free for releases and service events. A full app queue reboots the watch.
+#define APP_BUTTON_BACKLOG_MAX 16
+static uint8_t s_app_dropped_buttons;
+
+static void prv_limit_app_button_backlog(PebbleEvent *e, ButtonId button_id) {
+  const uint8_t bit = 1u << button_id;
+  if (e->type == PEBBLE_BUTTON_DOWN_EVENT &&
+      process_manager_process_events_waiting(PebbleTask_App) >= APP_BUTTON_BACKLOG_MAX) {
+    s_app_dropped_buttons |= bit;
+    e->task_mask |= 1 << PebbleTask_App;
+  } else if (e->type == PEBBLE_BUTTON_UP_EVENT && (s_app_dropped_buttons & bit)) {
+    s_app_dropped_buttons &= ~bit;
+    e->task_mask |= 1 << PebbleTask_App;
+  }
+}
+#endif
+
 static void launcher_handle_button_event(PebbleEvent *e) {
   ButtonId button_id = e->button.button_id;
   const bool watchface_running = app_manager_is_watchface_running();
@@ -239,6 +258,11 @@ static void launcher_handle_button_event(PebbleEvent *e) {
     // suppress the button event from the app task
     e->task_mask |= 1 << PebbleTask_App;
   }
+#ifdef CONFIG_LINUX_WATCH
+  else {
+    prv_limit_app_button_backlog(e, button_id);
+  }
+#endif
 }
 
 // This function should handle very basic events (Button clicks, app launching, battery events,

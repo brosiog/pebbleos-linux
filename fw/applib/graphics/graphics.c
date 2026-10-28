@@ -391,6 +391,7 @@ PBL_T_STATIC void prv_draw_round_rect_stroked(GContext *ctx, const GRect *rect, 
 }
 
 static void prv_graphics_convert_8_bit_to_1_bit(const GBitmap *from, GBitmap *to) {
+  // Light pixels become white; rows of a circular frame buffer only cover their visible span.
   const GRect bounds = from->bounds;
   uint8_t *to_buffer = (uint8_t *)to->addr;
 
@@ -400,10 +401,16 @@ static void prv_graphics_convert_8_bit_to_1_bit(const GBitmap *from, GBitmap *to
   const int x_end = x_start + bounds.size.w;
 
   for (int y = y_start; y < y_end; ++y) {
-    int to_idx_base = y * to->row_size_bytes;
-    uint8_t *line = to_buffer + to_idx_base;
+    uint8_t *line = to_buffer + y * to->row_size_bytes;
+    const GBitmapDataRowInfo row = gbitmap_get_data_row_info(from, y);
     for (int x = x_start; x < x_end; ++x) {
-      pbl_bitset8_clear(line, x);
+      const bool visible = x >= row.min_x && x <= row.max_x;
+      const GColor8 color = visible ? (GColor8){.argb = row.data[x]} : GColorBlack;
+      if (visible && (color.r + color.g + color.b) >= 5) {
+        pbl_bitset8_set(line, x);
+      } else {
+        pbl_bitset8_clear(line, x);
+      }
     }
   }
 }
@@ -646,7 +653,8 @@ GBitmap *graphics_capture_frame_buffer_format(GContext *ctx, GBitmapFormat forma
   }
 
   GBitmap *result = nullptr;
-  if (format == GBitmapFormat1Bit && native->info.format == GBitmapFormat8Bit) {
+  if (format == GBitmapFormat1Bit && (native->info.format == GBitmapFormat8Bit ||
+                                     native->info.format == GBitmapFormat8BitCircular)) {
     // Create a new blank gbitmap in the correct format.
     const GBitmap *native_framebuffer = graphics_context_get_bitmap(ctx);
 

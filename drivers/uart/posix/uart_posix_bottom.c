@@ -34,6 +34,7 @@ struct channel {
   bool connect;
   const char *device;
   bool flow_control;
+  bool hci;
   int listen_fd;
   atomic_int client_fd;
 };
@@ -98,9 +99,20 @@ static void prv_socket_options(int fd) {
 
 static void prv_receive(enum uart_posix_channel id, int fd) {
   struct channel *channel = &s_channels[id];
-  uint8_t buf[256];
+  uint8_t buf[4096];
   ssize_t n;
-  while ((n = read(fd, buf, sizeof(buf))) > 0) {
+  for (;;) {
+    n = read(fd, buf, sizeof(buf));
+    if (n < 0 && errno == EINTR)
+      continue;
+    if (n <= 0)
+      break;
+    if (channel->hci && getenv("PBL_HCI_TRACE")) {
+      fprintf(stderr, "HCI RX:");
+      for (ssize_t i = 0; i < n && i < 32; ++i)
+        fprintf(stderr, " %02x", buf[i]);
+      fprintf(stderr, " (%zd bytes)\n", n);
+    }
     for (ssize_t i = 0; i < n; i++) {
       while (channel->flow_control && !uart_posix_rx_enabled(id)) {
         usleep(RX_HOLD_POLL_US);
@@ -109,6 +121,84 @@ static void prv_receive(enum uart_posix_channel id, int fd) {
     }
   }
 }
+
+#ifdef __linux__
+static uint8_t s_hci_tx[8192];
+static size_t s_hci_tx_size;
+static size_t s_hci_tx_expected;
+
+static int prv_hci_open(const char *value) {
+  char *end;
+  unsigned long index = strtoul(value + 4, &end, 10);
+  if (!value[4] || *end || index >= 65535) {
+    fprintf(stderr, "invalid HCI controller: %s\n", value);
+    exit(1);
+  }
+  struct {
+    sa_family_t family;
+    uint16_t device;
+    uint16_t channel;
+  } address = {.family = 31, .device = index, .channel = 1};
+  int fd = socket(31, SOCK_RAW | SOCK_CLOEXEC, 1);
+  if (fd < 0 || bind(fd, (const struct sockaddr *)&address, sizeof(address))) {
+    fprintf(stderr, "HCI user channel %s: %s\n", value, strerror(errno));
+    if (fd >= 0)
+      close(fd);
+    exit(1);
+  }
+  fprintf(stderr, "HCI: exclusive controller %lu acquired\n", index);
+  return fd;
+}
+
+static void prv_hci_write_byte(int fd, uint8_t byte) {
+  if (s_hci_tx_size >= sizeof(s_hci_tx)) {
+    fprintf(stderr, "HCI: transmit frame exceeds buffer\n");
+    exit(1);
+  }
+  s_hci_tx[s_hci_tx_size++] = byte;
+  switch (s_hci_tx[0]) {
+    case 1:
+    case 3:
+      if (s_hci_tx_size == 4)
+        s_hci_tx_expected = 4 + s_hci_tx[3];
+      break;
+    case 2:
+    case 5:
+      if (s_hci_tx_size == 5) {
+        unsigned length = s_hci_tx[3] | (unsigned)s_hci_tx[4] << 8;
+        if (s_hci_tx[0] == 5)
+          length &= 0x3fff;
+        s_hci_tx_expected = 5 + length;
+      }
+      break;
+    default:
+      fprintf(stderr, "HCI: invalid transmit packet type %u\n", s_hci_tx[0]);
+      exit(1);
+  }
+  if (s_hci_tx_expected > sizeof(s_hci_tx)) {
+    fprintf(stderr, "HCI: unsupported transmit frame length\n");
+    exit(1);
+  }
+  if (s_hci_tx_expected && s_hci_tx_size == s_hci_tx_expected) {
+    if (getenv("PBL_HCI_TRACE")) {
+      fprintf(stderr, "HCI TX:");
+      for (size_t i = 0; i < s_hci_tx_size && i < 32; ++i)
+        fprintf(stderr, " %02x", s_hci_tx[i]);
+      fprintf(stderr, " (%zu bytes)\n", s_hci_tx_size);
+    }
+    ssize_t result;
+    do {
+      result = send(fd, s_hci_tx, s_hci_tx_size, MSG_NOSIGNAL);
+    } while (result < 0 && errno == EINTR);
+    if (result != (ssize_t)s_hci_tx_size) {
+      fprintf(stderr, "HCI transmit: %s\n", result < 0 ? strerror(errno) : "short packet");
+      exit(1);
+    }
+    s_hci_tx_size = 0;
+    s_hci_tx_expected = 0;
+  }
+}
+#endif
 
 // One client at a time, as QEMU's TCP serial ports.
 static void *prv_tcp_thread(void *arg) {
@@ -204,8 +294,17 @@ static void prv_start_thread(void *(*fn)(void *), void *arg) {
 void uart_posix_bottom_start(enum uart_posix_channel id) {
   struct channel *channel = &s_channels[id];
   if (channel->device != nullptr || (channel->connect && channel->port != 0)) {
-    const int fd =
-        channel->device ? prv_serial_open(channel->device) : prv_tcp_connect(channel->port);
+    int fd;
+    if (channel->hci) {
+#ifdef __linux__
+      fd = prv_hci_open(channel->device);
+#else
+      fprintf(stderr, "HCI user channels require Linux\n");
+      exit(1);
+#endif
+    } else {
+      fd = channel->device ? prv_serial_open(channel->device) : prv_tcp_connect(channel->port);
+    }
     atomic_store(&channel->client_fd, fd);
     prv_start_thread(prv_peer_thread, (void *)(intptr_t)id);
   } else if (channel->port != 0) {
@@ -231,7 +330,11 @@ void uart_posix_bottom_write(enum uart_posix_channel id, uint8_t c) {
   if (fd < 0) {
     return;
   }
-  if (channel->device != nullptr) {
+  if (channel->hci) {
+#ifdef __linux__
+    prv_hci_write_byte(fd, c);
+#endif
+  } else if (channel->device != nullptr) {
     (void)write(fd, &c, 1);
   } else {
     (void)send(fd, &c, 1, MSG_NOSIGNAL);
@@ -247,7 +350,10 @@ static void prv_set_qemu_port(const char *value) {
 }
 
 static void prv_set_bt_hci(const char *value) {
-  if (value[0] == '/') {
+  if (!strncmp(value, "hci:", 4)) {
+    s_channels[UART_POSIX_BT_HCI].device = value;
+    s_channels[UART_POSIX_BT_HCI].hci = true;
+  } else if (value[0] == '/') {
     s_channels[UART_POSIX_BT_HCI].device = value;
   } else {
     s_channels[UART_POSIX_BT_HCI].port = atoi(value);
@@ -259,7 +365,7 @@ POSIX_HOST_OPTION(.flag = 'c', .arg = "port", .help = "serve the console on this
 POSIX_HOST_OPTION(.flag = 'p', .arg = "port",
                   .help = "serve the QEMU serial protocol on this TCP port",
                   .set = prv_set_qemu_port)
-POSIX_HOST_OPTION(.flag = 'b', .arg = "port|device",
-                  .help = "connect the Bluetooth HCI UART to this TCP port or serial device",
+POSIX_HOST_OPTION(.flag = 'b', .arg = "port|device|hci:index",
+                  .help = "connect Bluetooth HCI to TCP, a serial device, or a Linux user channel",
                   .set = prv_set_bt_hci)
 POSIX_HOST_HOOK(.exit = prv_terminal_restore)

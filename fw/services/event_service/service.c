@@ -276,7 +276,7 @@ void event_service_handle_event(PebbleEvent *e) {
           if (s_dropped_events++ == 0) {
             PBL_LOG_ERR("Queue full! %d not delivered to task %d!", (int)e->type, (int)i);
           }
-#ifndef CONFIG_RELEASE
+#if !defined(CONFIG_RELEASE) && !defined(CONFIG_LINUX_WATCH)
           // For 3rd party apps, just close them. For a 1st party app or other task, reboot
           // the watch
           if (i == PebbleTask_App && app_manager_get_current_app_md()->is_unprivileged) {

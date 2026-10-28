@@ -28,6 +28,10 @@ config TOUCH_SDL
     help
       Touchscreen driven by the mouse, through SDL, in a native build.
 
+config TOUCH_LINUX_EVDEV
+    bool "Linux evdev touchscreen"
+    depends on LINUX_WATCH && BUTTON_LINUX_EVDEV
+
 module = DRIVER_TOUCH
 module-str = Touchscreen
 source "subsys/logging/Kconfig.template.log_level"

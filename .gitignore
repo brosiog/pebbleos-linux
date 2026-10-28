@@ -1,4 +1,7 @@
 build
+/build-galaxy/
+/build-galaxy-*/
+/build-host/
 build-test
 xcode
 

@@ -14,7 +14,9 @@ void pbl_mutex_deinit(struct pbl_mutex *m) {
 }
 
 int pbl_mutex_lock_lr(struct pbl_mutex *m, pbl_timeout_t timeout, uintptr_t lr) {
-  PBL_ASSERTN(!arch_in_isr());
+  if (arch_in_isr()) {
+    pbl_panic("mutex lock in ISR from %p", (void *)lr);
+  }
   int rc = 0;
 
   pbl_irq_lock();
@@ -45,7 +47,9 @@ int pbl_mutex_lock_lr(struct pbl_mutex *m, pbl_timeout_t timeout, uintptr_t lr) 
 
 void pbl_mutex_unlock(struct pbl_mutex *m) {
   pbl_irq_lock();
-  PBL_ASSERTN(m->owner == pbl_cur && m->count > 0);
+  if (m->owner != pbl_cur || m->count == 0) {
+    pbl_panic("mutex unlock by non-owner from %p isr=%d", PBL_RETURN_ADDRESS(0), arch_in_isr());
+  }
   if (--m->count == 0) {
     struct pbl_thread *prev = m->owner;
     prev->backend.mutexes_held--;

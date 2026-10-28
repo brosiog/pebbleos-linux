@@ -438,6 +438,17 @@ pbl_clar_test(test_hrm_manager
   OVERRIDES dummy_board
 )
 
+pbl_clar_test(test_hrm_manager_linux
+  SOURCES
+    fw/services/hrm/hrm_manager.c
+    kernel/tick.c
+    tests/fakes/fake_events.c
+    tests/fakes/fake_rtc.c
+    tests/fakes/fake_accel_service.c
+  DEFINES CONFIG_HRM_LINUX_WATCH=1
+  OVERRIDES dummy_board
+)
+
 pbl_clar_test(test_app_glance_service
   SOURCES
     fw/services/app_glances/app_glance_service.c

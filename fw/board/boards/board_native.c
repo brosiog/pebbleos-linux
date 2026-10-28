@@ -4,7 +4,11 @@
 #include <pbl/drivers/ambient/posix.h>
 #include <pbl/drivers/backlight/posix.h>
 #include <pbl/drivers/imu/posix.h>
+#ifdef CONFIG_MIC_LINUX
+#include <pbl/drivers/mic/linux/mic_definitions.h>
+#else
 #include <pbl/drivers/mic/qemu/mic_definitions.h>
+#endif
 #include <pbl/drivers/temperature/posix.h>
 #include <pbl/drivers/uart/posix.h>
 #include <pbl/drivers/vibe/posix.h>
@@ -29,7 +33,7 @@ static const struct UARTDevice s_qemu_uart = {
 
 UARTDevice *const QEMU_UART = &s_qemu_uart;
 
-#ifdef CONFIG_BT_HCI_UART
+#if defined(CONFIG_BT_HCI_UART) || defined(CONFIG_BT_HCI_LINUX)
 static UARTDeviceState s_bt_hci_uart_state;
 
 static const struct UARTDevice s_bt_hci_uart = {
@@ -80,7 +84,18 @@ void board_early_init(void) {
 void board_init(void) {
 }
 
+#ifdef CONFIG_ACCEL_LINUX_WATCH
+extern const struct pbl_accel pbl_accel_linux;
+const struct pbl_accel *const ACCEL = &pbl_accel_linux;
+#else
 const struct pbl_accel *const ACCEL = POSIX_ACCEL;
+#endif
+
+#ifdef CONFIG_HRM_LINUX_WATCH
+#include <pbl/drivers/hrm/linux.h>
+static const struct HRMDevice s_hrm;
+HRMDevice *const HRM = &s_hrm;
+#endif
 
 const struct pbl_als *const ALS = POSIX_ALS;
 

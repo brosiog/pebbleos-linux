@@ -710,6 +710,7 @@ static_assert(sizeof(PebbleUnobstructedAreaEvent) == 9,
 #endif
 
 typedef struct PBL_PACKED PebbleAppGlanceEvent {
+  // NULL means the entire glance database was cleared.
   Uuid *app_uuid;
 } PebbleAppGlanceEvent;
 
@@ -848,6 +849,9 @@ void events_init(void);
 
 void event_put(PebbleEvent *event);
 void event_put_isr(PebbleEvent *event);
+
+//! Free slots in the kernel event queue that event_put_isr() feeds.
+uint32_t event_kernel_queue_num_free(void);
 void event_put_from_process(PebbleTask task, PebbleEvent *event);
 
 //! Like event_put_from_app but it's allowed to fail.

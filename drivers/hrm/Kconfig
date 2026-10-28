@@ -30,6 +30,12 @@ config HRM_QEMU
       QEMU heart rate monitor. QEMU emulates none, so it can be enabled
       but never delivers samples.
 
+config HRM_LINUX_WATCH
+    bool "Linux watch heart rate adapter"
+    depends on ACCEL_LINUX_WATCH
+    help
+      Demand-controlled BPM measurements through the Samsung sensor service.
+
 module = DRIVER_HRM
 module-str = Heart Rate Monitor
 source "subsys/logging/Kconfig.template.log_level"

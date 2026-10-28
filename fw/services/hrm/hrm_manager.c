@@ -184,11 +184,17 @@ static void prv_accel_unsubscribe(void) {
   AccelManagerState *accel_state = s_manager_state.accel_state;
   s_manager_state.accel_state = nullptr;
   pbl_mutex_unlock(&s_manager_state.accel_data_lock);
-  sys_accel_manager_data_unsubscribe(accel_state);
+  if (accel_state) {
+    sys_accel_manager_data_unsubscribe(accel_state);
+  }
 }
 
 // Posts nothing until it has a buffer, so the subscription is published before the buffer is set
 static void prv_accel_subscribe(void) {
+#ifdef CONFIG_HRM_LINUX_WATCH
+  // The vendor BPM service does not consume the host-side Goodix motion buffer.
+  return;
+#endif
   uint32_t subscription = s_manager_state.accel_subscription + 1;
   AccelManagerState *accel_state =
       sys_accel_manager_data_subscribe(ACCEL_SAMPLING_25HZ, prv_handle_accel_data,
@@ -240,10 +246,17 @@ static HRMFeature prv_prefs_allowed_features(void) {
 // background and lingering subscribers from lighting a disabled path.
 static HRMFeature prv_subscriber_allowed_features(const HRMSubscriberState *state,
                                                   HRMFeature prefs_allowed) {
+#ifdef CONFIG_HRM_LINUX_WATCH
+  // The vendor service only reports BPM. A due SpO2/HRV subscriber would fail hrm_enable() and,
+  // after HRM_MAX_ENABLE_FAILURES, disable heart rate until the next restart.
+  const HRMFeature supported = HRMFeature_BPM;
+#else
+  const HRMFeature supported = (HRMFeature)~0;
+#endif
   if (state->task == PebbleTask_App) {
-    return state->features;
+    return state->features & supported;
   }
-  return state->features & prefs_allowed;
+  return state->features & prefs_allowed & supported;
 }
 
 #ifndef CONFIG_MFG

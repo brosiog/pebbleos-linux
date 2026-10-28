@@ -7,6 +7,9 @@
 #include <pbl/drivers/accel.h>
 #include <pbl/drivers/rtc.h>
 #include <pbl/drivers/vibe.h>
+#ifdef CONFIG_LINUX_WATCH
+#include <pbl/drivers/vibe/posix.h>
+#endif
 #include <pbl/kernel/assert.h>
 #include <pbl/kernel/mutex.h>
 #include <pbl/kernel/syscall.h>
@@ -216,7 +219,7 @@ static void prv_update_strength_analytics(uint8_t new_strength_pct) {
 //! This function should be used instead of pbl_vibe_start() so that the vibe
 //! history is kept in sync with the vibe state.
 //! The caller must be holding s_vibe_pattern_mutex
-static void prv_vibes_set_vibe_strength(int32_t new_strength) {
+static void prv_vibes_set_vibe_strength(int32_t new_strength, uint32_t duration_ms) {
   pbl_mutex_assert_held(&s_vibe_pattern_mutex, true);
   if (!s_vibe_service_enabled) {
     PBL_ASSERTN(s_vibe_strength == VIBE_STRENGTH_OFF);
@@ -229,7 +232,11 @@ static void prv_vibes_set_vibe_strength(int32_t new_strength) {
   prv_update_strength_analytics(new_strength_pct);
 
   if (new_strength != VIBE_STRENGTH_OFF) {
+#ifdef CONFIG_LINUX_WATCH
+    (void)pbl_vibe_posix_start_timed(new_strength, MIN(duration_ms, 5000));
+#else
     (void)pbl_vibe_start(VIBE, new_strength);
+#endif
     s_last_vibe_active_tick = rtc_get_ticks();
     if (s_vibe_strength == VIBE_STRENGTH_OFF) {
       // Transitioning from off to on
@@ -253,7 +260,7 @@ void vibe_service_set_enabled(bool enable) {
   pbl_mutex_lock(&s_vibe_pattern_mutex, PBL_FOREVER);
   if (enable != s_vibe_service_enabled) {
     // ensure that the vibe is off before disabling it. No op if enabling it
-    prv_vibes_set_vibe_strength(VIBE_STRENGTH_OFF);
+    prv_vibes_set_vibe_strength(VIBE_STRENGTH_OFF, 0);
     s_vibe_service_enabled = enable;
   }
   pbl_mutex_unlock(&s_vibe_pattern_mutex);
@@ -291,15 +298,15 @@ static void prv_timer_callback(void *data) {
 
   if (s_vibe_queue_head != nullptr) {
     // move to the next step
-    prv_vibes_set_vibe_strength(s_vibe_queue_head->strength);
     const uint32_t next_ms = prv_next_timeout_ms(s_vibe_queue_head->duration_ms);
+    prv_vibes_set_vibe_strength(s_vibe_queue_head->strength, next_ms);
     bool success =
         new_timer_start(s_pattern_timer, next_ms, prv_timer_callback, nullptr, 0 /*flags*/);
     PBL_ASSERTN(success);
   } else {
     // I'm done with the active pattern
     // make sure it's off
-    prv_vibes_set_vibe_strength(VIBE_STRENGTH_OFF);
+    prv_vibes_set_vibe_strength(VIBE_STRENGTH_OFF, 0);
     s_pattern_in_progress = false;
     s_pattern_owner = VibePatternOwner_Other;
     PBL_LOG_DBG("vibe_pattern: pattern complete");
@@ -420,9 +427,9 @@ PBL_SYSCALL(void, sys_vibe_pattern_trigger_start) {
 
   s_pattern_start_ticks = rtc_get_ticks();
   s_pattern_deadline_ms = 0;
-  prv_vibes_set_vibe_strength(s_vibe_queue_head->strength);
   s_pattern_in_progress = true;
   const uint32_t first_ms = prv_next_timeout_ms(s_vibe_queue_head->duration_ms);
+  prv_vibes_set_vibe_strength(s_vibe_queue_head->strength, first_ms);
   bool success =
       new_timer_start(s_pattern_timer, first_ms, prv_timer_callback, nullptr, 0 /*flags*/);
   PBL_ASSERTN(success);
@@ -444,7 +451,7 @@ static void prv_clear_pattern_locked(void) {
   // clear that finds the motor on with no active pattern is a wedged vibe.
   PBL_LOG_DBG("vibe_pattern: clear, in_progress=%d, strength=%" PRId32 ", %u steps dropped",
               s_pattern_in_progress, s_vibe_strength, dropped_steps);
-  prv_vibes_set_vibe_strength(VIBE_STRENGTH_OFF);
+  prv_vibes_set_vibe_strength(VIBE_STRENGTH_OFF, 0);
   s_pattern_in_progress = false;
   s_pattern_owner = VibePatternOwner_Other;
 }

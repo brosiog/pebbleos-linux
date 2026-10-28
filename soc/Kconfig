@@ -49,6 +49,12 @@ config POSIX_EMSCRIPTEN
       with Emscripten. Kernel threads are fibers on the browser's single
       thread, and the browser's event loop drives the host side.
 
+config LINUX_WATCH
+    bool "Linux watch hardware"
+    depends on SOC_POSIX
+    help
+      Run native PebbleOS against Linux framebuffer and evdev devices.
+
 config SDL
     bool
     depends on SOC_POSIX

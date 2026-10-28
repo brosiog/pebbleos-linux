@@ -2,6 +2,9 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
 #include "nimble_type_conversions.h"
+#ifdef CONFIG_BT_HCI_LINUX
+#include "nimble_rpa.h"
+#endif
 
 #include <string.h>
 
@@ -87,6 +90,32 @@ static int prv_nimble_store_read_sec(const int obj_type, const struct ble_store_
   pbl_mutex_lock(&s_store_mutex, PBL_FOREVER);
 
   s = prv_nimble_store_find_sec(obj_type, key_sec);
+#ifdef CONFIG_BT_HCI_LINUX
+  // This controller may leave an incoming private address unresolved.
+  if (s == nullptr && key_sec->idx == 0 && key_sec->peer_addr.type == BLE_ADDR_RANDOM &&
+      (key_sec->peer_addr.val[5] & 0xc0) == 0x40) {
+    BleStoreValueSec *peer = s_peer_value_secs;
+    BleStoreValueSec *match = nullptr;
+    while (peer) {
+      if (peer->value_sec.irk_present &&
+          nimble_rpa_matches_irk(key_sec->peer_addr.val, peer->value_sec.irk)) {
+        if (match) {
+          match = nullptr;
+          break;
+        }
+        match = peer;
+      }
+      peer = (BleStoreValueSec *)peer->node.next;
+    }
+    if (match) {
+      struct ble_store_key_sec identity = {.peer_addr = match->value_sec.peer_addr};
+      s = prv_nimble_store_find_sec(obj_type, &identity);
+      if (s) {
+        PBL_LOG_INFO("Resolved private address for saved encryption key");
+      }
+    }
+  }
+#endif
   if (s == nullptr) {
     ret = BLE_HS_ENOENT;
     goto unlock;

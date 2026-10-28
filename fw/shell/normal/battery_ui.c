@@ -170,8 +170,40 @@ static void prv_update_ui_warning(Dialog *dialog, void *context) {
   prv_update_liquid(dialog);
 }
 
+//! Round-display layout needs the dialog's text layer to be initialized first.
+//! Doing this in the window load callback runs after simple_dialog's load
+//! handler has set the text and font; running it right after the push leaves
+//! text_layer->font NULL and crashes when the battery dialog is shown.
+static void prv_adjust_round_text_layout(Dialog *dialog) {
+#if PBL_ROUND
+  TextLayer *text_layer = &dialog->text_layer;
+  GContext *ctx = graphics_context_get_current_context();
+  const int font_height = fonts_get_font_height(text_layer->font);
+  const int text_cap_height = fonts_get_font_cap_offset(text_layer->font);
+  const int max_text_height = 2 * font_height + text_cap_height;
+  const int32_t text_height = text_layer_get_content_size(ctx, text_layer).h;
+  if (text_height > max_text_height) {
+    // Values used below were to improve visual aesthetics and were reviewed by design
+    const int num_lines = 3;
+    const int line_spacing_delta = -4;
+    const int text_shift_y = -2;
+    const int text_box_height =
+        (font_height + text_cap_height) * num_lines + line_spacing_delta * (num_lines - 1);
+    const int text_flow_inset = 6; // Modify to allow longer central lines
+    text_layer_enable_screen_text_flow_and_paging(text_layer, text_flow_inset);
+    text_layer_set_size(text_layer, GSize(DISP_COLS, text_box_height));
+    text_layer->layer.frame.origin.y += text_shift_y;
+    text_layer_set_line_spacing_delta(text_layer, line_spacing_delta);
+  }
+#else
+  (void)dialog;
+#endif
+}
+
 static void prv_dialog_on_load(void *context) {
-  prv_set_liquid_processor(context);
+  Dialog *dialog = context;
+  prv_set_liquid_processor(dialog);
+  prv_adjust_round_text_layout(dialog);
 }
 
 static void prv_dialog_on_unload(void *context) {
@@ -203,31 +235,6 @@ static void prv_display_modal(WindowStack *stack, DialogUpdateFn update_fn, void
   Dialog *old_dialog = s_dialog;
   s_dialog = new_dialog;
   simple_dialog_push(new_simple_dialog, stack);
-
-#if PBL_ROUND
-  // For circular display, to fit some battery_ui messages requires 3 lines
-  // Simple dialog only allows up to 2 lines, so adjust here
-  // This has to occur after the dialog push has been called
-  TextLayer *text_layer = &new_simple_dialog->dialog.text_layer;
-  GContext *ctx = graphics_context_get_current_context();
-  const int font_height = fonts_get_font_height(text_layer->font);
-  const int text_cap_height = fonts_get_font_cap_offset(text_layer->font);
-  const int max_text_height = 2 * font_height + text_cap_height;
-  const int32_t text_height = text_layer_get_content_size(ctx, text_layer).h;
-  if (text_height > max_text_height) {
-    // Values used below were to improve visual aesthetics and were reviewed by design
-    const int num_lines = 3;
-    const int line_spacing_delta = -4;
-    const int text_shift_y = -2;
-    const int text_box_height =
-        (font_height + text_cap_height) * num_lines + line_spacing_delta * (num_lines - 1);
-    const int text_flow_inset = 6; // Modify to allow longer central lines
-    text_layer_enable_screen_text_flow_and_paging(text_layer, text_flow_inset);
-    text_layer_set_size(text_layer, GSize(DISP_COLS, text_box_height));
-    text_layer->layer.frame.origin.y += text_shift_y;
-    text_layer_set_line_spacing_delta(text_layer, line_spacing_delta);
-  }
-#endif
 
   if (old_dialog) {
     dialog_pop(old_dialog);

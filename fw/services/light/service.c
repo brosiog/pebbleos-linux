@@ -290,7 +290,12 @@ AmbientLightLevel light_level_to_enum(uint32_t lux) {
 }
 
 static bool prv_als_is_light(void) {
+#ifdef CONFIG_LINUX_WATCH
+  // An emissive OLED still needs illumination in bright surroundings.
+  return false;
+#else
   return prv_get_als_gate_level() > s_dark_threshold;
+#endif
 }
 
 static void light_timer_callback(void *data) {
@@ -462,7 +467,11 @@ static void prv_change_brightness(uint8_t new_brightness) {
   if (turning_on) {
     pbl_als_suspend(ALS);
   }
-  (void)pbl_backlight_set_brightness(BACKLIGHT, scaled_brightness);
+#ifdef CONFIG_LINUX_WATCH
+  // OLED ambient mode replaces the LED fade; preserve the last awake brightness.
+  if (new_brightness == 0U || s_light_state != LIGHT_STATE_ON_FADING)
+#endif
+    (void)pbl_backlight_set_brightness(BACKLIGHT, scaled_brightness);
   if (turning_off) {
     pbl_als_resume(ALS);
   }

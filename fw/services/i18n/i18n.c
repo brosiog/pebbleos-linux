@@ -176,13 +176,13 @@ static void prv_lookup(const char *msgid, struct DomainBinding *db, size_t *rlen
 
 static bool prv_get_property(const char *header, const char *name, char *buffer, size_t size) {
   // Isolate the language name
-  char *str = strstr(header, name);
+  const char *str = strstr(header, name);
   if (str == nullptr) { // strstr failed
     return false;
   }
   str += strlen(name);
 
-  char *end = strchr(str, '\n');
+  const char *end = strchr(str, '\n');
   if (end == nullptr || (size_t)(end - str) >= size) {
     return false;
   }
@@ -414,6 +414,9 @@ static bool prv_check_domain(struct DomainBinding *db) {
 }
 
 static const char *prv_message_from_msgid(const char *msgid) {
+  if (msgid == nullptr) {
+    return nullptr;
+  }
   // If a string wasn't found, we want to return the original string.
   // However, if we have a context, this string needs to not show the context.
   // So we just find EOT and if it's present return the next character.

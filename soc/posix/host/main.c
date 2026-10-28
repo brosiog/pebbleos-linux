@@ -1,6 +1,7 @@
 /* SPDX-FileCopyrightText: 2026 Core Devices LLC */
 /* SPDX-License-Identifier: Apache-2.0 */
 
+#define _GNU_SOURCE
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,6 +14,103 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <unistd.h>
+
+#ifdef __linux__
+#include <fcntl.h>
+#include <poll.h>
+static int s_wake_pipe[2] = {-1, -1};
+static void prv_notify(void) {
+  if (s_wake_pipe[1] >= 0) {
+    (void)write(s_wake_pipe[1], "w", 1);
+  }
+}
+#else
+static void prv_notify(void) {}
+#endif
+
+#if defined(__linux__) && (defined(__aarch64__) || defined(__arm__))
+#include <signal.h>
+
+#include <ucontext.h>
+
+static void prv_fault_hex(const char *label, size_t len, uint64_t value) {
+  static const char hex[] = "0123456789abcdef";
+  char output[] = "0x0000000000000000\n";
+  for (unsigned i = 0; i < 16; ++i) {
+    output[17 - i] = hex[value & 15];
+    value >>= 4;
+  }
+  (void)write(STDERR_FILENO, label, len);
+  (void)write(STDERR_FILENO, output, sizeof(output) - 1);
+}
+
+__attribute__((weak)) uintptr_t posix_host_fault_landing(uintptr_t pc, uintptr_t lr) {
+  (void)pc;
+  (void)lr;
+  return 0;
+}
+
+// Resumes the faulting thread at the firmware's landing zone, if it has one.
+static bool prv_fault_redirect(ucontext_t *uc) {
+#ifdef __aarch64__
+  uintptr_t landing = posix_host_fault_landing(uc->uc_mcontext.pc, uc->uc_mcontext.regs[30]);
+  if (!landing) {
+    return false;
+  }
+  uc->uc_mcontext.pc = landing;
+  uc->uc_mcontext.sp &= ~(uintptr_t)15;
+#else
+  uintptr_t landing = posix_host_fault_landing(uc->uc_mcontext.arm_pc, uc->uc_mcontext.arm_lr);
+  if (!landing) {
+    return false;
+  }
+  // Clear the Thumb and IT state bits, then select the landing zone's instruction set.
+  const unsigned long thumb = 1UL << 5;
+  const unsigned long it_bits = (0x3FUL << 10) | (0x3UL << 25);
+  uc->uc_mcontext.arm_cpsr &= ~(thumb | it_bits);
+  if (landing & 1) {
+    uc->uc_mcontext.arm_cpsr |= thumb;
+  }
+  uc->uc_mcontext.arm_pc = landing & ~(uintptr_t)1;
+  uc->uc_mcontext.arm_sp &= ~(uintptr_t)7;
+#endif
+  return true;
+}
+
+static void prv_fault(int signal_number, siginfo_t *info, void *context) {
+  ucontext_t *uc = context;
+  prv_fault_hex("FAULT signal=", 13, signal_number);
+  prv_fault_hex("address=", 8, (uintptr_t)info->si_addr);
+#ifdef __aarch64__
+  prv_fault_hex("pc=", 3, uc->uc_mcontext.pc);
+  prv_fault_hex("lr=", 3, uc->uc_mcontext.regs[30]);
+  prv_fault_hex("sp=", 3, uc->uc_mcontext.sp);
+  for (unsigned i = 0; i < 30; ++i) {
+    prv_fault_hex("register=", 9, uc->uc_mcontext.regs[i]);
+  }
+#else
+  prv_fault_hex("pc=", 3, uc->uc_mcontext.arm_pc);
+  prv_fault_hex("lr=", 3, uc->uc_mcontext.arm_lr);
+  prv_fault_hex("sp=", 3, uc->uc_mcontext.arm_sp);
+  const unsigned long regs[] = {
+    uc->uc_mcontext.arm_r0, uc->uc_mcontext.arm_r1, uc->uc_mcontext.arm_r2,
+    uc->uc_mcontext.arm_r3, uc->uc_mcontext.arm_r4, uc->uc_mcontext.arm_r5,
+    uc->uc_mcontext.arm_r6, uc->uc_mcontext.arm_r7, uc->uc_mcontext.arm_r8,
+    uc->uc_mcontext.arm_r9, uc->uc_mcontext.arm_r10, uc->uc_mcontext.arm_fp,
+    uc->uc_mcontext.arm_ip,
+  };
+  for (unsigned i = 0; i < 13; ++i) {
+    prv_fault_hex("register=", 9, regs[i]);
+  }
+#endif
+  if (prv_fault_redirect(uc)) {
+    static const char message[] = "FAULT_RECOVERY killing the faulting app\n";
+    (void)write(STDERR_FILENO, message, sizeof(message) - 1);
+    return;
+  }
+  _exit(128 + signal_number);
+}
+#endif
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
@@ -36,6 +134,7 @@ static bool s_reboot;
 static char **s_argv;
 static char s_exe_dir[PATH_MAX];
 static int s_exit_after_s;
+static uint64_t s_exit_at_us;
 
 void posix_host_option_register(const struct posix_host_option *option) {
   if (s_num_options < MAX_OPTIONS) {
@@ -53,6 +152,7 @@ void posix_host_wake(void) {
   pthread_mutex_lock(&s_lock);
   s_woken = true;
   pthread_cond_signal(&s_cond);
+  prv_notify();
   pthread_mutex_unlock(&s_lock);
 }
 
@@ -60,6 +160,7 @@ void posix_host_quit(void) {
   pthread_mutex_lock(&s_lock);
   s_quit = true;
   pthread_cond_signal(&s_cond);
+  prv_notify();
   pthread_mutex_unlock(&s_lock);
 }
 
@@ -69,6 +170,7 @@ void posix_host_reboot(void) {
   s_reboot = true;
   s_quit = true;
   pthread_cond_signal(&s_cond);
+  prv_notify();
   pthread_mutex_unlock(&s_lock);
   for (;;) {
     pause();
@@ -77,7 +179,11 @@ void posix_host_reboot(void) {
 
 uint64_t posix_host_monotonic_us(void) {
   struct timespec ts;
+#ifdef __linux__
+  clock_gettime(CLOCK_BOOTTIME, &ts);
+#else
   clock_gettime(CLOCK_MONOTONIC, &ts);
+#endif
   return (uint64_t)ts.tv_sec * 1000000 + (uint64_t)ts.tv_nsec / 1000;
 }
 
@@ -136,6 +242,44 @@ static bool prv_wait(void) {
   s_woken = false;
   return s_quit;
 }
+#elif defined(__linux__)
+static bool prv_wait(void) {
+  struct pollfd descriptors[64] = {{.fd = s_wake_pipe[0], .events = POLLIN}};
+  unsigned count = 1, timeout = 60000;
+  for (size_t i = 0; i < s_num_hooks; i++) {
+    const struct posix_host_hook *hook = s_hooks[i];
+    if (hook->poll) {
+      unsigned delay = hook->poll_timeout_ms ? hook->poll_timeout_ms() : POLL_MS;
+      if (delay < timeout)
+        timeout = delay;
+    }
+    if (hook->poll_fd) {
+      for (unsigned index = 0; count < 64; index++) {
+        int fd = hook->poll_fd(index);
+        if (fd < 0)
+          break;
+        descriptors[count++] = (struct pollfd){.fd = fd, .events = POLLIN};
+      }
+    }
+  }
+  if (s_exit_after_s > 0) {
+    uint64_t now = posix_host_monotonic_us();
+    unsigned remaining = now < s_exit_at_us ? (s_exit_at_us - now + 999) / 1000 : 0;
+    if (remaining < timeout)
+      timeout = remaining;
+  }
+  pthread_mutex_lock(&s_lock);
+  bool ready = s_woken || s_quit;
+  s_woken = false;
+  pthread_mutex_unlock(&s_lock);
+  (void)poll(descriptors, count, ready ? 0 : (int)timeout);
+  char bytes[128];
+  while (read(s_wake_pipe[0], bytes, sizeof(bytes)) > 0) {}
+  pthread_mutex_lock(&s_lock);
+  bool quit = s_quit;
+  pthread_mutex_unlock(&s_lock);
+  return quit;
+}
 #else
 static bool prv_wait(void) {
   struct timeval now;
@@ -160,6 +304,19 @@ static bool prv_wait(void) {
 #endif
 
 int main(int argc, char **argv) {
+#ifdef __linux__
+  if (pipe2(s_wake_pipe, O_NONBLOCK | O_CLOEXEC)) {
+    perror("host wake pipe");
+    return 1;
+  }
+#endif
+#if defined(__linux__) && (defined(__aarch64__) || defined(__arm__))
+  struct sigaction fault_action = {.sa_sigaction = prv_fault, .sa_flags = SA_SIGINFO};
+  sigemptyset(&fault_action.sa_mask);
+  sigaction(SIGSEGV, &fault_action, nullptr);
+  sigaction(SIGBUS, &fault_action, nullptr);
+  sigaction(SIGILL, &fault_action, nullptr);
+#endif
   s_argv = argv;
   char exe[PATH_MAX];
   if (realpath(argv[0], exe) != nullptr) {
@@ -176,9 +333,9 @@ int main(int argc, char **argv) {
 
   posix_fw_start();
 
-  const uint64_t exit_at_us = posix_host_monotonic_us() + (uint64_t)s_exit_after_s * 1000000;
+  s_exit_at_us = posix_host_monotonic_us() + (uint64_t)s_exit_after_s * 1000000;
   do {
-    if (s_exit_after_s > 0 && posix_host_monotonic_us() >= exit_at_us) {
+    if (s_exit_after_s > 0 && posix_host_monotonic_us() >= s_exit_at_us) {
       break;
     }
     for (size_t i = 0; i < s_num_hooks; i++) {
