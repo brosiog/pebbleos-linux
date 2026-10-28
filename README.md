@@ -4,16 +4,14 @@ This fork runs [PebbleOS](https://github.com/coredevices/PebbleOS) as a Linux pr
 the PebbleOS scheduler, services, apps and UI, and adds Linux display, input, battery and device
 adapter drivers. The Samsung Galaxy Watch3 SM-R850 is the reference hardware.
 
-![Concept mockup of a Galaxy Watch3 showing the PebbleOS launcher beside a build terminal](docs/_static/images/linux-watch/galaxy-watch3-workbench.png)
+![Concept mockup of the PebbleOS launcher on a Galaxy Watch3](docs/_static/images/linux-watch/galaxy-watch3-launcher-detail.png)
 
 *AI-generated concept mockup using a captured PebbleOS screen.*
 
 <details>
-<summary>More mockups</summary>
+<summary>Clock view</summary>
 
 ![Concept mockup of the orange PebbleOS clock on a wrist at a keyboard](docs/_static/images/linux-watch/galaxy-watch3-wrist-at-keyboard.png)
-
-![Concept mockup of the PebbleOS launcher on a Galaxy Watch3](docs/_static/images/linux-watch/galaxy-watch3-launcher-detail.png)
 
 </details>
 
