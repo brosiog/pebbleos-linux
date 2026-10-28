@@ -17,14 +17,16 @@ adapter drivers. The Samsung Galaxy Watch3 SM-R850 is the reference hardware.
 
 On the Galaxy Watch3, the port runs alongside Samsung's Linux kernel and Tizen userspace. It
 renders a 260 × 260 round UI on the 360 × 360 display through Wayland or the framebuffer and
-reads buttons, bezel and touch through evdev. A separate Galaxy Watch3 connector handles Tizen
-sensor, haptic and display-power APIs over Unix datagram sockets.
+reads buttons, bezel and touch through evdev. The separate [Galaxy Watch3 connector](https://github.com/brosiog/galaxy-watch3-connector)
+handles Tizen sensor, haptic and display-power APIs over Unix datagram sockets.
 
 ## Status and compatibility
 
-This is an experimental source candidate for developers. Earlier builds reached the launcher
-and handled controls and phone notifications on a physical watch. The current **protocol-v2 OS
-and connector have not yet been tested together on hardware**. Host tests and AArch64/ARM32
+This is an experimental source candidate for developers. I’m currently daily-driving this port
+on my Galaxy Watch3, with occasional crashes. That describes my running development build;
+the **protocol-v2 OS and connector in this repository have not yet been tested together on
+hardware**. Earlier builds reached the launcher and handled controls and phone notifications
+on the watch. Host tests and AArch64/ARM32
 cross-builds pass; battery endurance, sensor accuracy, suspend and display timing still need
 on-watch validation. The Linux OS/mock boot CI job is configured but has not run for this candidate.
 
