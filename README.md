@@ -28,7 +28,8 @@ the **protocol-v2 OS and connector in this repository have not yet been tested t
 hardware**. Earlier builds reached the launcher and handled controls and phone notifications
 on the watch. Host tests and AArch64/ARM32
 cross-builds pass; battery endurance, sensor accuracy, suspend and display timing still need
-on-watch validation. The Linux OS/mock boot CI job is configured but has not run for this candidate.
+on-watch validation. [GitHub Actions](https://github.com/brosiog/pebbleos-linux/actions/workflows/linux-adapter.yml)
+tracks the Linux OS/mock boot and host-test results.
 
 | Target | Output |
 | --- | --- |

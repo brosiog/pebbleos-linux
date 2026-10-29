@@ -5,6 +5,7 @@ permissions:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-24.04, macos-15]
     runs-on: ${{ matrix.os }}
@@ -26,7 +27,8 @@ jobs:
           cmake -S . -B build-linux -GNinja \
             -DBOARD=native_gabbro/galaxy_watch3 \
             -DCMAKE_TOOLCHAIN_FILE="$PWD/cmake/toolchain/host.cmake" \
-            -DCONFIG_BT_HCI_LINUX=n -DCONFIG_BT_HCI_FAKE=y
+            -DCONFIG_BT_HCI_LINUX=n -DCONFIG_BT_HCI_FAKE=y \
+            -DCONFIG_BATTERY_LINUX=n -DCONFIG_BATTERY_POSIX=y
           cmake --build build-linux --parallel 4
       - name: Build the mock and run host checks
         run: |

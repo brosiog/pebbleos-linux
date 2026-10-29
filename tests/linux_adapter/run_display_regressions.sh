@@ -6,7 +6,7 @@ root=$(CDPATH= cd -- "$here/../.." && pwd)
 out=$(mktemp -d /tmp/pbl-display-review.XXXXXX)
 trap 'rm -rf "$out"' EXIT
 cc=${CC:-cc}
-set -- -std=c2x -Wall -Wextra -Werror -O1 -g "-I$root/include" \
+set -- -std=gnu2x -Wall -Wextra -Werror -O1 -g "-I$root/include" \
   "-I$root/soc/posix/include"
 if [ "$(uname -s)" = Darwin ]; then
   headers=${LINUX_HEADERS:-$root/../tools/python/ziglang/lib/libc/include/any-linux-any}

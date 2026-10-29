@@ -83,7 +83,7 @@ suites cover interpolation, steps and HRM delivery. Run them through `pbl test` 
 corresponding targets in a configured unit-test build.
 
 The `linux-adapter` CI workflow also builds the watch configuration for the Linux runner's CPU,
-with a fake Bluetooth controller, and uses `tests/linux_adapter/smoke_os.py` to boot it with
+with simulated Bluetooth and battery backends, and uses `tests/linux_adapter/smoke_os.py` to boot it with
 absent, full and partial adapter support. Each case must reach the launcher, save a complete
 display frame and respect the declared capabilities. This checks the OS process; hardware
 timing and power remain separate tests.
