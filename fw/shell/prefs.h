@@ -296,6 +296,10 @@ void display_orientation_set_left(bool left);
 GColor shell_prefs_get_theme_highlight_color(void);
 void shell_prefs_set_theme_highlight_color(GColor color);
 
+//! Dark mode draws system UI light-on-black; see system_theme_is_dark()
+bool shell_prefs_get_theme_dark_mode(void);
+void shell_prefs_set_theme_dark_mode(bool enabled);
+
 bool shell_prefs_get_menu_scroll_wrap_around_enable(void);
 void shell_prefs_set_menu_scroll_wrap_around_enable(bool enable);
 
