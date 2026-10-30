@@ -43,7 +43,8 @@ static void prv_update_proc(Layer *layer, GContext *ctx) {
   }
 
   if (peek_layer->show_dot) {
-    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_context_set_fill_color(
+        ctx, peek_layer->follows_theme ? system_theme_get_fg_color() : GColorBlack);
     GRect dot_rect = {.size = {peek_layer->dot_diameter, peek_layer->dot_diameter}};
     grect_align(&dot_rect, &peek_layer->layer.bounds, GAlignCenter, false /* clip */);
     graphics_fill_radial(ctx, dot_rect, GOvalScaleModeFitCircle, peek_layer->dot_diameter, 0,
@@ -161,6 +162,15 @@ void peek_layer_set_frame(PeekLayer *peek_layer, const GRect *frame) {
                   &(GRect){{0, peek_layer->icon_offset_y}, frame->size});
 }
 
+void peek_layer_set_follows_theme(PeekLayer *peek_layer) {
+  peek_layer->follows_theme = true;
+  const GColor fg = system_theme_get_fg_color();
+  text_layer_set_text_color(&peek_layer->number.text_layer, fg);
+  text_layer_set_text_color(&peek_layer->title.text_layer, fg);
+  text_layer_set_text_color(&peek_layer->subtitle.text_layer, fg);
+  kino_layer_set_draw_command_processor(&peek_layer->kino_layer, system_theme_get_icon_processor());
+}
+
 void peek_layer_set_background_color(PeekLayer *peek_layer, GColor color) {
   peek_layer->bg_color = color;
 }
@@ -174,6 +184,10 @@ void peek_layer_set_icon_with_size_invert(PeekLayer *peek_layer,
                                           TimelineResourceSize res_size, GRect icon_from,
                                           bool invert) {
   kino_layer_set_invert_colors(&peek_layer->kino_layer, invert);
+  if (!invert && peek_layer->follows_theme) {
+    kino_layer_set_draw_command_processor(&peek_layer->kino_layer,
+                                          system_theme_get_icon_processor());
+  }
   kino_layer_set_reel(&peek_layer->kino_layer, nullptr, false);
 
   AppResourceInfo icon_res_info;

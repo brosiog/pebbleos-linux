@@ -34,6 +34,7 @@
 #include <popups/timeline/peek_animations.h>
 #include <process_state/app_state/app_state.h>
 #include <resource/resource_ids.auto.h>
+#include <shell/system_theme.h>
 
 #define PAST_TOP_MARGIN_EXTRA   PBL_IF_RECT_ELSE(10, 38)
 #define FUTURE_TOP_MARGIN_EXTRA PBL_IF_RECT_ELSE(10, 18)
@@ -654,7 +655,7 @@ static void prv_update_proc(struct Layer *layer, GContext *ctx) {
   TimelineLayer *timeline_layer = (TimelineLayer *)layer;
   const GRect *bounds = &layer->bounds;
 
-  graphics_context_set_fill_color(ctx, GColorWhite);
+  graphics_context_set_fill_color(ctx, system_theme_get_bg_color());
   graphics_fill_rect(ctx, &(GRect){.size = bounds->size});
 
   AnimationProgress progress;
@@ -663,7 +664,7 @@ static void prv_update_proc(struct Layer *layer, GContext *ctx) {
     const GPoint offset = {
       PEEK_ANIMATIONS_SPEED_LINES_OFFSET_X, interpolate_int64_linear(progress, 0, -DISP_ROWS)
     };
-    graphics_context_set_fill_color(ctx, GColorBlack);
+    graphics_context_set_fill_color(ctx, system_theme_get_fg_color());
     peek_animations_draw_timeline_speed_lines(ctx, offset);
   }
 
@@ -709,7 +710,8 @@ static void prv_update_proc(struct Layer *layer, GContext *ctx) {
   }
 
   graphics_context_set_antialiased(ctx, true);
-  const GColor arrow_fill_color = PBL_IF_RECT_ELSE(timeline_layer->sidebar_color, GColorWhite);
+  const GColor arrow_fill_color =
+      PBL_IF_RECT_ELSE(timeline_layer->sidebar_color, system_theme_get_bg_color());
   graphics_context_set_fill_color(ctx, arrow_fill_color);
   gpath_draw_filled(ctx, &arrow_path);
   graphics_context_set_antialiased(ctx, false);
@@ -963,6 +965,7 @@ void timeline_layer_init(TimelineLayer *layer, const GRect *frame_ref,
   TimelineResourceInfo timeline_res = {
     .res_id = TIMELINE_RESOURCE_DAY_SEPARATOR,
   };
+  peek_layer_set_follows_theme(&layer->day_separator);
   peek_layer_set_icon(&layer->day_separator, &timeline_res);
   peek_layer_set_background_color(&layer->day_separator, GColorClear);
   peek_layer_set_dot_diameter(&layer->day_separator, style->day_sep_dot_diameter);
@@ -973,6 +976,7 @@ void timeline_layer_init(TimelineLayer *layer, const GRect *frame_ref,
   prv_get_end_of_timeline_frame(layer, 3, &frame);
   kino_layer_init(&layer->end_of_timeline, &frame);
   kino_layer_set_reel_with_resource(&layer->end_of_timeline, RESOURCE_ID_END_OF_TIMELINE);
+  kino_layer_set_draw_command_processor(&layer->end_of_timeline, system_theme_get_icon_processor());
   kino_layer_set_alignment(&layer->end_of_timeline, GAlignTop);
   layer_add_child((Layer *)layer, (Layer *)&layer->end_of_timeline);
 

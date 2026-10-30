@@ -364,7 +364,7 @@ static void prv_move_timeline_layer_stopped(Animation *animation, bool finished,
 
   // reset the timeline layer
   data->timeline_layer.layer.bounds.origin.x = 0;
-  window_set_background_color(&data->timeline_window, GColorWhite);
+  window_set_background_color(&data->timeline_window, system_theme_get_bg_color());
 
   if (!finished) {
     return;
@@ -1041,7 +1041,7 @@ static void prv_timeline_window_load(Window *window) {
     scroll_direction = TimelineScrollDirectionDown;
   }
 
-  window_set_background_color(window, GColorWhite);
+  window_set_background_color(window, system_theme_get_bg_color());
 
   // timeline layer
   timeline_layer_init(timeline_layer, &window->layer.bounds, scroll_direction);
@@ -1084,7 +1084,7 @@ static void prv_back_from_card_stopped(Animation *animation, bool finished, void
     return;
   }
 
-  window_set_background_color(&data->timeline_window, GColorWhite);
+  window_set_background_color(&data->timeline_window, system_theme_get_bg_color());
 
   data->current_animation = nullptr;
   prv_update_timeline_layer(data);
@@ -1119,7 +1119,7 @@ Animation *timeline_animate_back_from_card(void) {
   animation_unschedule(data->current_animation);
 
   timeline_layer_set_layouts_hidden(&data->timeline_layer, true);
-  window_set_background_color(&data->timeline_window, GColorWhite);
+  window_set_background_color(&data->timeline_window, system_theme_get_bg_color());
 
   TimelineLayout *pin_timeline_layout = timeline_layer_get_current_layout(&data->timeline_layer);
   if (pin_timeline_layout) {
