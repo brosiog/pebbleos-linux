@@ -18,6 +18,7 @@
 static void prv_actionable_dialog_load(Window *window) {
   ActionableDialog *actionable_dialog = window_get_user_data(window);
   Dialog *dialog = &actionable_dialog->dialog;
+  dialog_apply_theme(dialog);
   Layer *window_root_layer = window_get_root_layer(window);
 
   // Ownership of icon is taken over by KinoLayer in dialog_init_icon_layer() call below

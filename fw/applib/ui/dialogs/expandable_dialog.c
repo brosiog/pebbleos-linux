@@ -92,6 +92,7 @@ static void prv_config_provider(void *context) {
 static void prv_expandable_dialog_load(Window *window) {
   ExpandableDialog *expandable_dialog = window_get_user_data(window);
   Dialog *dialog = &expandable_dialog->dialog;
+  dialog_apply_theme(dialog);
 
   GRect frame = window->layer.bounds;
   static const uint16_t ICON_TOP_MARGIN_PX = 16;
