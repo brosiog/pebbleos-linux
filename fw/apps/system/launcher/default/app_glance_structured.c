@@ -18,6 +18,7 @@
 #include <process_management/app_install_manager.h>
 #include <resource/resource_ids.auto.h>
 #include <shell/prefs.h>
+#include <shell/system_theme.h>
 
 // Use display height to determine icon margins: larger displays use more margin
 #if PBL_DISPLAY_HEIGHT >= 200
@@ -90,22 +91,26 @@ GColor launcher_app_glance_structured_get_highlight_color(
     GColor highlight_bg = shell_prefs_get_theme_highlight_color();
     return gcolor_legible_over(highlight_bg);
   } else {
-    return GColorBlack;
+    return system_theme_get_fg_color();
   }
 #else
   return structured_glance->glance.is_highlighted ? GColorWhite : GColorBlack;
 #endif
 }
 
-static GColor prv_get_icon_tint_color(LauncherAppGlanceStructured *structured_glance) {
-  // Icons should always be tinted black on color displays, white on B&W when highlighted
-  return PBL_IF_COLOR_ELSE(GColorBlack,
-                           structured_glance->glance.is_highlighted ? GColorWhite : GColorBlack);
+GColor launcher_app_glance_structured_get_icon_color(
+    LauncherAppGlanceStructured *structured_glance) {
+  // Icons are black on color displays (white on unhighlighted rows in dark mode), and white on B&W
+  // when highlighted
+  const bool is_highlighted = structured_glance->glance.is_highlighted;
+  return PBL_IF_COLOR_ELSE(is_highlighted ? GColorBlack : system_theme_get_fg_color(),
+                           is_highlighted ? GColorWhite : GColorBlack);
 }
 
 void launcher_app_glance_structured_draw_icon(LauncherAppGlanceStructured *structured_glance,
                                               GContext *ctx, KinoReel *icon, GPoint origin) {
-  const GColor desired_tint_color = prv_get_icon_tint_color(structured_glance);
+  const GColor desired_tint_color =
+      launcher_app_glance_structured_get_icon_color(structured_glance);
 
   GenericGlanceIconBitmapProcessor structured_glance_icon_bitmap_processor = {
     .bitmap_processor =
