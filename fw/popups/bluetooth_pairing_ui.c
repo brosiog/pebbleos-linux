@@ -30,6 +30,7 @@
 #include <kernel/ui/modals/modal_manager.h>
 #include <kernel/ui/system_icons.h>
 #include <resource/resource_ids.auto.h>
+#include <shell/system_theme.h>
 
 #ifdef CONFIG_SHELL
 #include <pbl/shell/shell.h>
@@ -173,8 +174,8 @@ static void prv_add_prf_layers(GRect pair_text_area, BTPairingUIData *data) {
 
   TextLayer *info_text_layer2 = &data->info_text_layer2;
   text_layer_init_with_parameters(info_text_layer2, &above_pair_text, data->info_text_layer2_buffer,
-                                  fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GColorBlack,
-                                  GColorClear, GTextAlignmentCenter,
+                                  fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
+                                  system_theme_get_fg_color(), GColorClear, GTextAlignmentCenter,
                                   GTextOverflowModeTrailingEllipsis);
   layer_add_child(&data->info_text_mask_layer, &info_text_layer2->layer);
 
@@ -372,7 +373,9 @@ static void prv_user_confirmation_click_config_provider(void *unused) {
 
 static void prv_window_load(Window *window) {
   BTPairingUIData *data = window_get_user_data(window);
-  window_set_background_color(&data->window, PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite));
+  window_set_background_color(
+      &data->window,
+      PBL_IF_COLOR_ELSE(system_theme_color(GColorLightGray, GColorBlack), GColorWhite));
 
   const int32_t width_of_action_bar_with_padding = ACTION_BAR_WIDTH + PBL_IF_RECT_ELSE(2, -4);
   const int32_t width = window->layer.bounds.size.w - width_of_action_bar_with_padding;
@@ -387,6 +390,7 @@ static void prv_window_load(Window *window) {
 
   KinoLayer *kino_layer = &data->kino_layer;
   kino_layer_init(kino_layer, &window->layer.bounds);
+  kino_layer_set_draw_command_processor(kino_layer, system_theme_get_icon_processor());
   layer_add_child(&window->layer, &kino_layer->layer);
 
 #if PBL_DISPLAY_HEIGHT >= 200
@@ -410,7 +414,7 @@ static void prv_window_load(Window *window) {
 #else
                                   fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
 #endif
-                                  GColorBlack, GColorClear, GTextAlignmentCenter,
+                                  system_theme_get_fg_color(), GColorClear, GTextAlignmentCenter,
                                   GTextOverflowModeTrailingEllipsis);
   layer_add_child(&data->info_text_mask_layer, &info_text_layer->layer);
 
@@ -442,8 +446,9 @@ static void prv_window_load(Window *window) {
     TextLayer *device_name_layer = &data->device_name_text_layer;
     text_layer_init_with_parameters(
         device_name_layer, &GRect(x_offset, 122 + y_offset, device_name_width, 30),
-        data->device_name_layer_buffer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GColorBlack,
-        GColorClear, GTextAlignmentCenter, GTextOverflowModeTrailingEllipsis);
+        data->device_name_layer_buffer, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD),
+        system_theme_get_fg_color(), GColorClear, GTextAlignmentCenter,
+        GTextOverflowModeTrailingEllipsis);
     layer_add_child(&window->layer, &device_name_layer->layer);
   }
   // Confirmation token:
@@ -451,8 +456,8 @@ static void prv_window_load(Window *window) {
     TextLayer *code_text_layer = &data->code_text_layer;
     text_layer_init_with_parameters(
         code_text_layer, &GRect(x_offset, 148 + y_offset, width, 30), data->code_text_layer_buffer,
-        fonts_get_system_font(FONT_KEY_GOTHIC_14), GColorBlack, GColorClear, GTextAlignmentCenter,
-        GTextOverflowModeTrailingEllipsis);
+        fonts_get_system_font(FONT_KEY_GOTHIC_14), system_theme_get_fg_color(), GColorClear,
+        GTextAlignmentCenter, GTextOverflowModeTrailingEllipsis);
     layer_add_child(&window->layer, &code_text_layer->layer);
   }
 
