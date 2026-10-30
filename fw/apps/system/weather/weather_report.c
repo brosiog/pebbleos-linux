@@ -375,6 +375,7 @@ void weather_report_push(const WeatherLocationForecast *days, size_t num_days,
   s_report->current_day_index =
       (start_day_index >= 0 && start_day_index < (int)num_days) ? start_day_index : 0;
   s_report->window = window_create();
+  window_set_dark_filter(s_report->window, true);
   if (!s_report->window) {
     free(s_report);
     s_report = nullptr;
@@ -709,6 +710,7 @@ void weather_report_push(const WeatherLocationForecast *days, size_t num_days,
   s_report->current_day_index =
       (start_day_index >= 0 && start_day_index < (int)num_days) ? start_day_index : 0;
   s_report->window = window_create();
+  window_set_dark_filter(s_report->window, true);
   if (!s_report->window) {
     free(s_report);
     s_report = nullptr;

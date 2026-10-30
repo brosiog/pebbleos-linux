@@ -1467,6 +1467,7 @@ static void prv_clock_face_push(const WeatherLocationForecast *days, size_t num_
   }
 
   s_cf->window = window_create();
+  window_set_dark_filter(s_cf->window, true);
   window_set_background_color(s_cf->window, GColorBlack);
   window_set_window_handlers(s_cf->window, (WindowHandlers){
                                              .load = prv_window_load,

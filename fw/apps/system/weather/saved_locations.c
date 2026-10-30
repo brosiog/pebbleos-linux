@@ -507,6 +507,7 @@ void saved_locations_push(const SavedLocationsConfig *config) {
   view->select_context = config ? config->select_context : nullptr;
 
   view->window = window_create();
+  window_set_dark_filter(view->window, true);
   if (!view->window) {
     free(view);
     s_view = nullptr;
