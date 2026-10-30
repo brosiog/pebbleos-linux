@@ -8,6 +8,7 @@
 #include <pbl/services/i18n/i18n.h>
 
 #include <kernel/pbl_malloc.h>
+#include <shell/system_theme.h>
 
 static void prv_menu_unload(OptionMenu *option_menu, void *context) {
   SettingsOptionMenuData *data = context;
@@ -37,6 +38,14 @@ static uint16_t prv_menu_get_cell_height(OptionMenu *option_menu, uint16_t row, 
                                         selected);
 }
 
+void settings_option_menu_apply_theme(OptionMenu *option_menu) {
+  const GColor bg = system_theme_get_bg_color();
+  const GColor fg = system_theme_get_fg_color();
+  window_set_background_color(&option_menu->window, bg);
+  option_menu_set_status_colors(option_menu, bg, fg);
+  option_menu_set_normal_colors(option_menu, bg, fg);
+}
+
 OptionMenu *settings_option_menu_create(const char *i18n_title_key,
                                         OptionMenuContentType content_type, int choice,
                                         const OptionMenuCallbacks *callbacks_ref, uint16_t num_rows,
@@ -55,6 +64,7 @@ OptionMenu *settings_option_menu_create(const char *i18n_title_key,
     .icons_enabled = icons_enabled,
   };
   option_menu_configure(option_menu, &config);
+  settings_option_menu_apply_theme(option_menu);
   SettingsOptionMenuData *data = task_malloc_check(sizeof(SettingsOptionMenuData));
   OptionMenuCallbacks callbacks = *callbacks_ref;
   *data = (SettingsOptionMenuData){

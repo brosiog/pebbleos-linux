@@ -4,6 +4,7 @@
 #include "activity_tracker.h"
 
 #include "menu.h"
+#include "option_menu.h"
 
 #include <pbl/services/i18n/i18n.h>
 
@@ -233,7 +234,7 @@ static Window *prv_init(void) {
   option_menu_init(&data->option_menu);
   // Not using option_menu_configure because prv_reload_menu_data already sets
   // icons_enabled and chosen row index
-  option_menu_set_status_colors(&data->option_menu, GColorWhite, GColorBlack);
+  settings_option_menu_apply_theme(&data->option_menu);
   GColor highlight_bg = shell_prefs_get_theme_highlight_color();
   option_menu_set_highlight_colors(&data->option_menu, highlight_bg,
                                    gcolor_legible_over(highlight_bg));

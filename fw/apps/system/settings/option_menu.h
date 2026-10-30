@@ -21,3 +21,6 @@ OptionMenu *settings_option_menu_push(const char *i18n_title_key,
                                       bool icons_enabled, const char **rows, void *context);
 
 void *settings_option_menu_get_context(SettingsOptionMenuData *data);
+
+//! Applies the system theme's window, status bar and row colors
+void settings_option_menu_apply_theme(OptionMenu *option_menu);
