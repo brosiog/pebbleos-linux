@@ -161,6 +161,8 @@ static void prv_window_load(Window *window) {
                              .draw_row = draw_row_callback,
                              .select_click = select_callback,
                            });
+  menu_layer_set_normal_colors(menu_layer, system_theme_get_bg_color(),
+                               system_theme_get_fg_color());
   menu_layer_set_highlight_colors(&data->menu_layer,
                                   PBL_IF_COLOR_ELSE(GColorJazzberryJam, GColorBlack), GColorWhite);
   menu_layer_set_click_config_onto_window(menu_layer, window);
@@ -188,6 +190,7 @@ static void handle_init(void) {
 
   Window *window = &data->window;
   window_init(window, WINDOW_NAME("Watchfaces"));
+  window_set_background_color(window, system_theme_get_bg_color());
   window_set_user_data(window, data);
   window_set_window_handlers(window, &(WindowHandlers){
                                        .load = prv_window_load,
