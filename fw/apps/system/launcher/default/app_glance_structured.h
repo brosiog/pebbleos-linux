@@ -108,6 +108,10 @@ void *launcher_app_glance_structured_get_data(LauncherAppGlanceStructured *struc
 GColor launcher_app_glance_structured_get_highlight_color(
     LauncherAppGlanceStructured *structured_glance);
 
+//! Color of the glance's icon and other line art
+GColor launcher_app_glance_structured_get_icon_color(
+    LauncherAppGlanceStructured *structured_glance);
+
 //! Draw an icon in the structured launcher app glance.
 //! @param structured_glance The structured glance in which to draw an icon
 //! @param ctx The graphics context to use when drawing the icon

@@ -221,6 +221,8 @@ void launcher_menu_layer_init(LauncherMenuLayer *launcher_menu_layer,
 
   MenuLayer *menu_layer = &launcher_menu_layer->menu_layer;
   menu_layer_init(menu_layer, &menu_layer_frame);
+  menu_layer_set_normal_colors(menu_layer, system_theme_get_bg_color(),
+                               system_theme_get_fg_color());
   GColor highlight_bg = shell_prefs_get_theme_highlight_color();
   menu_layer_set_highlight_colors(menu_layer, highlight_bg, gcolor_legible_over(highlight_bg));
   menu_layer_pad_bottom_enable(menu_layer, false);
@@ -262,8 +264,8 @@ void launcher_menu_layer_init(LauncherMenuLayer *launcher_menu_layer,
       scroll_layer_get_content_indicator(&menu_layer->scroll_layer);
   ContentIndicatorConfig content_indicator_config = (ContentIndicatorConfig){
     .layer = up_arrow_layer,
-    .colors.background = GColorWhite,
-    .colors.foreground = GColorDarkGray,
+    .colors.background = system_theme_get_bg_color(),
+    .colors.foreground = system_theme_color(GColorDarkGray, GColorLightGray),
   };
   content_indicator_configure_direction(content_indicator, ContentIndicatorDirectionUp,
                                         &content_indicator_config);

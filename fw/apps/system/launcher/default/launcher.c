@@ -16,6 +16,7 @@
 #include <process_state/app_state/app_state.h>
 #include <shell/normal/app_idle_timeout.h>
 #include <shell/prefs.h>
+#include <shell/system_theme.h>
 
 typedef struct LauncherAppWindowData {
   Window window;
@@ -98,6 +99,8 @@ static void prv_window_load(Window *window) {
                               .transform_index = prv_transform_index,
                             },
                             data);
+
+  window_set_background_color(window, system_theme_get_bg_color());
 
   LauncherMenuLayer *launcher_menu_layer = &data->launcher_menu_layer;
   launcher_menu_layer_init(launcher_menu_layer, data_source);
