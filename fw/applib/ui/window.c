@@ -23,6 +23,7 @@
 #include <kernel/ui/modals/modal_manager.h>
 #include <process_management/process_manager.h>
 #include <process_state/app_state/app_state.h>
+#include <shell/system_theme.h>
 #include <syscall/syscall.h>
 
 typedef enum {
@@ -130,6 +131,10 @@ void window_render(Window *window, GContext *ctx) {
 
   prv_restore_drawing_state(&saved_state, ctx);
 
+  if (window->dark_filter) {
+    system_theme_dark_filter_bitmap(&ctx->dest_bitmap, &window->layer.frame);
+  }
+
   prv_render_legacy2_system_status_bar(ctx, window);
 
   window->is_render_scheduled = false;
@@ -230,6 +235,14 @@ void window_set_touch_bridge_disabled(Window *window, bool disabled) {
     return;
   }
   window->touch_bridge_disabled = disabled;
+}
+
+void window_set_dark_filter(Window *window, bool enabled) {
+  if (!window || (enabled == window->dark_filter)) {
+    return;
+  }
+  window->dark_filter = enabled;
+  layer_mark_dirty(&window->layer);
 }
 
 void window_set_touch_tap_requires_action_bar(Window *window, bool requires_action_bar) {

@@ -136,6 +136,11 @@ typedef struct Window {
   bool is_click_configured : 1;
 
   //! @internal
+  //! If set, the rendered window is passed through the dark mode filter, see
+  //! \ref window_set_dark_filter()
+  bool dark_filter : 1;
+
+  //! @internal
   //! If the window can visually expose window stacks below it. This property decides whether the
   //! window stack would expose window stacks below it. A window stack is transparent if the top
   //! window in the window stack is transparent. Windows that are not the top window in their
@@ -457,6 +462,11 @@ void window_set_touch_tap_requires_action_bar(Window *window, bool requires_acti
 //! @param window \ref Window from which to get recognizers
 //! @return recognizer list
 RecognizerList *window_get_recognizer_list(Window *window);
+
+//! @internal
+//! In dark mode, invert the lightness of everything the window draws (see
+//! system_theme_dark_filter_bitmap()). For system windows drawn for a white background.
+void window_set_dark_filter(Window *window, bool enabled);
 
 //! Get the recognizer manager that manages recognizers attached to this window and all layers
 //! attached to the window
