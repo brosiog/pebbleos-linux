@@ -45,6 +45,7 @@
 #include <kernel/ui/modals/modal_manager.h>
 #include <process_state/app_state/app_state.h>
 #include <resource/resource_ids.auto.h>
+#include <shell/system_theme.h>
 #include <syscall/syscall.h>
 
 #define DICTATION_TIMEOUT        (15 * 1000) // 15s timeout for each dictation
@@ -573,7 +574,7 @@ static void prv_cancel_dictation(VoiceUiData *data) {
 static void prv_dot_layer_update_proc(Layer *layer, GContext *ctx) {
   VoiceUiData *data = window_get_user_data(layer_get_window(layer));
   // get frame to place dot in middle of layer
-  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_context_set_fill_color(ctx, system_theme_get_fg_color());
   graphics_fill_circle(ctx, grect_center_point(&layer->bounds), data->mic_window.mic_dot_radius);
 }
 
@@ -1174,7 +1175,8 @@ static void prv_set_mic_window_state(VoiceUiData *data, VoiceUiState state) {
 static void prv_mic_window_load(Window *window) {
   VoiceUiData *data = window_get_user_data(window);
 
-  const GColor window_bg_color = PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite);
+  const GColor window_bg_color =
+      PBL_IF_COLOR_ELSE(system_theme_color(GColorLightGray, GColorBlack), GColorWhite);
   window_set_background_color(window, window_bg_color);
   Layer *root_layer = window_get_root_layer(window);
   const GRect *root_frame = &root_layer->frame;
@@ -1198,7 +1200,7 @@ static void prv_mic_window_load(Window *window) {
   text_layer_init_with_parameters(
       text_layer,
       &GRect(0, dot_frame.origin.y + TEXT_LAYER_Y_OFFSET, root_frame->size.w, font_height * 2),
-      nullptr, font, GColorBlack, window_bg_color, GTextAlignmentCenter,
+      nullptr, font, system_theme_get_fg_color(), window_bg_color, GTextAlignmentCenter,
       GTextOverflowModeTrailingEllipsis);
   layer_add_child(root_layer, (Layer *)text_layer);
   layer_set_hidden((Layer *)text_layer, true);
@@ -1210,7 +1212,7 @@ static void prv_mic_window_load(Window *window) {
 
   LoadingLayer *loading_layer = &data->mic_window.progress_bar;
   loading_layer_init(loading_layer, &loading_frame);
-  progress_layer_set_foreground_color((ProgressLayer *)loading_layer, GColorBlack);
+  progress_layer_set_foreground_color((ProgressLayer *)loading_layer, system_theme_get_fg_color());
 
   const GColor progress_bg_color = PBL_IF_COLOR_ELSE(GColorDarkGray, GColorWhite);
   progress_layer_set_background_color((ProgressLayer *)loading_layer, progress_bg_color);
@@ -1219,8 +1221,7 @@ static void prv_mic_window_load(Window *window) {
 
   StatusBarLayer *status_bar = &data->mic_window.status_bar;
   status_bar_layer_init(status_bar);
-  const GColor status_bg_color = PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite);
-  status_bar_layer_set_colors(status_bar, status_bg_color, GColorBlack);
+  status_bar_layer_set_colors(status_bar, window_bg_color, system_theme_get_fg_color());
   layer_add_child(root_layer, (Layer *)status_bar);
 
   KinoReel *image =
@@ -1253,6 +1254,8 @@ static void prv_mic_window_load(Window *window) {
     kino_reel_scale_segmented_set_bounce_effect(icon_reel, UNFOLD_BOUNCE_AMOUNT);
 
     kino_layer_init(&data->mic_window.icon_layer, &icon_frame);
+    kino_layer_set_draw_command_processor(&data->mic_window.icon_layer,
+                                          system_theme_get_icon_processor());
     // do not clip bounds of window - animated icon will be hidden when it's not within the
     // visible bounds
     kino_layer_set_reel(&data->mic_window.icon_layer, icon_reel, true);

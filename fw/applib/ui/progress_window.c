@@ -13,6 +13,7 @@
 #include <applib/ui/app_window_stack.h>
 #include <applib/ui/window_private.h>
 #include <applib/ui/window_stack.h>
+#include <shell/system_theme.h>
 
 #define SCROLL_OUT_MS         250
 #define BAR_HEIGHT            PROGRESS_SUGGESTED_HEIGHT
@@ -27,6 +28,10 @@
 #define FAKE_PROGRESS_UPDATE_AMOUNT   2
 
 #define INITIAL_PERCENT 0
+
+static GColor prv_bg_color(void) {
+  return PBL_IF_COLOR_ELSE(system_theme_color(GColorLightGray, GColorBlack), GColorWhite);
+}
 
 static void prv_finished(ProgressWindow *data, bool success) {
   if (data->callbacks.finished) {
@@ -126,9 +131,10 @@ static void prv_schedule_progress_failure_animation(ProgressWindow *data, uint32
     TimelineResourceInfo timeline_res = {
       .res_id = timeline_res_id,
     };
+    peek_layer_set_follows_theme(peek_layer);
     peek_layer_set_icon(peek_layer, &timeline_res);
     peek_layer_set_title(peek_layer, message);
-    peek_layer_set_background_color(peek_layer, PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite));
+    peek_layer_set_background_color(peek_layer, prv_bg_color());
     data->is_peek_layer_used = true;
   }
 
@@ -259,7 +265,7 @@ void progress_window_init(ProgressWindow *data) {
   // Create and set up the window
   Window *window = &data->window;
   window_init(window, WINDOW_NAME("Progress Window"));
-  window_set_background_color(window, PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite));
+  window_set_background_color(window, prv_bg_color());
 
   const GRect *bounds = &window->layer.bounds;
   GPoint center = grect_center_point(bounds);
@@ -272,7 +278,8 @@ void progress_window_init(ProgressWindow *data) {
   progress_layer_init(progress_layer, &progress_bounds);
 #if PBL_COLOR
   progress_layer_set_foreground_color(progress_layer, GColorWhite);
-  progress_layer_set_background_color(progress_layer, GColorBlack);
+  progress_layer_set_background_color(progress_layer,
+                                      system_theme_color(GColorBlack, GColorDarkGray));
 #endif
   progress_layer_set_corner_radius(progress_layer, PROGRESS_SUGGESTED_CORNER_RADIUS);
   layer_add_child(&window->layer, (Layer *)progress_layer);
