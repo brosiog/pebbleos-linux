@@ -2263,6 +2263,7 @@ static void show_intro_canvas(GlobeView *view) {
 
   if (view->window) {
     window_set_background_color(view->window, GColorWhite);
+    window_set_dark_filter(view->window, true);
   }
   if (view->canvas_layer)
     layer_set_hidden(view->canvas_layer, false);
@@ -2282,6 +2283,8 @@ static void show_revealed_space_layers(GlobeView *view) {
 
   if (view->window) {
     window_set_background_color(view->window, GColorBlack);
+    // Space is already dark
+    window_set_dark_filter(view->window, false);
   }
   update_city_label_layer(view);
 
@@ -3572,6 +3575,7 @@ GlobeView *globe_view_create(void) {
 
   // Create window
   view->window = window_create();
+  window_set_dark_filter(view->window, true);
   if (!view->window) {
     free(view);
     return nullptr;

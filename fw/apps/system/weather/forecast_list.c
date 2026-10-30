@@ -3788,6 +3788,7 @@ static void prv_forecast_list_push(const WeatherLocationForecast *days, size_t n
   }
 
   s_list->window = window_create();
+  window_set_dark_filter(s_list->window, true);
   // ROUND (gabbro smoothness step 3): transparent — window.c's root-layer proc fills the
   // whole window with the bg colour EVERY frame unless it is transparent (~53KB of writes
   // on the 260px glass), and every branch of prv_canvas_draw already paints every pixel

@@ -879,6 +879,7 @@ void expanded_view_push(const WeatherLocationForecast *today, int16_t lat_e2, in
   prv_set_from_forecast(today, lat_e2, lon_e2, utc_off_min);
 
   s_ev->window = window_create();
+  window_set_dark_filter(s_ev->window, true);
   if (!s_ev->window) {
     free(s_ev);
     s_ev = nullptr;
