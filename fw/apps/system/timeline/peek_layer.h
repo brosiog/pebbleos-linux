@@ -44,6 +44,8 @@ typedef struct {
   int16_t subtitle_margin;
   uint8_t dot_diameter;
   bool show_dot;
+  //! Draw the text, dot and line-art icon in the system theme's colors
+  bool follows_theme;
 } PeekLayer;
 
 //! Create a peek layer with a frame.
@@ -96,6 +98,10 @@ ImmutableAnimation *peek_layer_create_play_section_animation(PeekLayer *peek_lay
                                                              uint32_t to_elapsed_ms);
 
 //! Set the background color of the peek layer.
+//! Draws the text, dot and line-art icons in the system theme's foreground colors, for peek layers
+//! over a theme-colored background.
+void peek_layer_set_follows_theme(PeekLayer *peek_layer);
+
 void peek_layer_set_background_color(PeekLayer *peek_layer, GColor color);
 
 //! Sets the text of the peek layer text fields. The text is copied over.
