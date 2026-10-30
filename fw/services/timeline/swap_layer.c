@@ -22,6 +22,7 @@
 
 #include <applib/ui/recognizer/touch_nav.h>
 #include <kernel/pebble_tasks.h>
+#include <shell/system_theme.h>
 #endif
 
 // Initial pixel scroll amount, paging_height (LAYOUT_HEIGHT) for circular display
@@ -265,7 +266,11 @@ static void prv_arrow_layer_update_proc(Layer *layer, GContext *ctx) {
 #if UNITTEST
   const GCompOp compositing_mode = GCompOpSet;
 #else
-  const GCompOp compositing_mode = PBL_IF_COLOR_ELSE(GCompOpSet, GCompOpAssign);
+  GCompOp compositing_mode = PBL_IF_COLOR_ELSE(GCompOpSet, GCompOpAssign);
+  if (system_theme_is_dark()) {
+    compositing_mode = GCompOpTint;
+    graphics_context_set_tint_color(ctx, system_theme_get_fg_color());
+  }
 #endif
   graphics_context_set_compositing_mode(ctx, compositing_mode);
 
