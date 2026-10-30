@@ -26,6 +26,7 @@
 #include <process_state/app_state/app_state.h>
 #include <resource/resource_ids.auto.h>
 #include <shell/prefs.h>
+#include <shell/system_theme.h>
 
 #define SEND_TEXT_APP_HIGHLIGHT_COLOR PBL_IF_COLOR_ELSE(SMS_REPLY_COLOR, GColorBlack)
 
@@ -290,6 +291,7 @@ static void prv_init(void) {
 
   Window *window = &data->window;
   window_init(window, WINDOW_NAME("Send Text"));
+  window_set_background_color(window, system_theme_get_bg_color());
   window_set_user_data(window, data);
 
   Layer *window_root_layer = &window->layer;
@@ -315,6 +317,8 @@ static void prv_init(void) {
                                .select_click = prv_contact_list_select_callback,
                              });
 
+    menu_layer_set_normal_colors(&data->menu_layer, system_theme_get_bg_color(),
+                                 system_theme_get_fg_color());
     menu_layer_set_highlight_colors(&data->menu_layer, SEND_TEXT_APP_HIGHLIGHT_COLOR, GColorWhite);
     menu_layer_set_click_config_onto_window(&data->menu_layer, &data->window);
     menu_layer_set_scroll_wrap_around(&data->menu_layer,
@@ -328,7 +332,7 @@ static void prv_init(void) {
 
     StatusBarLayer *status_layer = &data->status_layer;
     status_bar_layer_init(status_layer);
-    status_bar_layer_set_colors(status_layer, GColorClear, GColorBlack);
+    status_bar_layer_set_colors(status_layer, GColorClear, system_theme_get_fg_color());
     // On rect we show the "Select Contact" text in the status bar, but on round the status bar
     // shows the clock time and we use a menu cell header to display "Select Contact" (see above)
 #if PBL_RECT
@@ -345,9 +349,10 @@ static void prv_init(void) {
     TimelineResourceInfo timeline_res = {
       .res_id = TIMELINE_RESOURCE_GENERIC_WARNING,
     };
+    peek_layer_set_follows_theme(peek_layer);
     peek_layer_set_icon(peek_layer, &timeline_res);
     peek_layer_set_title(peek_layer, i18n_get("Add contacts in\nmobile app", data));
-    peek_layer_set_background_color(peek_layer, GColorLightGray);
+    peek_layer_set_background_color(peek_layer, system_theme_color(GColorLightGray, GColorBlack));
     peek_layer_play(peek_layer);
     layer_add_child(window_root_layer, &peek_layer->layer);
   }
