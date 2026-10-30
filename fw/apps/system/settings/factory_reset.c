@@ -18,6 +18,7 @@
 #include <kernel/ui/system_icons.h>
 #include <kernel/util/factory_reset.h>
 #include <resource/resource_ids.auto.h>
+#include <shell/system_theme.h>
 
 #define MESSAGE_BUF_SIZE 96
 
@@ -55,9 +56,11 @@ static void confirm_click_handler(ClickRecognizerRef recognizer, void *context) 
   TimelineResourceInfo timeline_res = {
     .res_id = TIMELINE_RESOURCE_GENERIC_WARNING,
   };
+  peek_layer_set_follows_theme(peek_layer);
   peek_layer_set_icon(peek_layer, &timeline_res);
   peek_layer_set_title(peek_layer, i18n_get("Resetting...", data));
-  peek_layer_set_background_color(peek_layer, PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite));
+  peek_layer_set_background_color(
+      peek_layer, PBL_IF_COLOR_ELSE(system_theme_color(GColorLightGray, GColorBlack), GColorWhite));
   peek_layer_play(peek_layer);
   layer_add_child(&window->layer, &peek_layer->layer);
 

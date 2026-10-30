@@ -47,6 +47,7 @@
 #include <shell/normal/battery_ui.h>
 #include <shell/prefs.h>
 #include <shell/system_app_ids.auto.h>
+#include <shell/system_theme.h>
 #include <syscall/syscall.h>
 #include <system/bootbits.h>
 #include <system/version.h>
@@ -176,7 +177,9 @@ static void prv_init_status_bar(StatusBarLayer *status_layer, Window *window, co
   status_bar_layer_init(status_layer);
   status_bar_layer_set_title(status_layer, text, false, false);
   status_bar_layer_set_separator_mode(status_layer, OPTION_MENU_STATUS_SEPARATOR_MODE);
-  status_bar_layer_set_colors(status_layer, GColorWhite, GColorBlack);
+  status_bar_layer_set_colors(status_layer, system_theme_get_bg_color(),
+                              system_theme_get_fg_color());
+  window_set_background_color(window, system_theme_get_bg_color());
   layer_add_child(&window->layer, status_bar_layer_get_layer(status_layer));
 }
 
@@ -273,6 +276,8 @@ static void prv_information_window_load(Window *window) {
                              .get_cell_height = prv_information_get_cell_height_callback,
                              .draw_row = prv_information_draw_row_callback,
                            });
+  menu_layer_set_normal_colors(menu_layer, system_theme_get_bg_color(),
+                               system_theme_get_fg_color());
   GColor highlight_bg = shell_prefs_get_theme_highlight_color();
   menu_layer_set_highlight_colors(menu_layer, highlight_bg, gcolor_legible_over(highlight_bg));
   menu_layer_set_click_config_onto_window(menu_layer, &data->window);
@@ -622,6 +627,8 @@ static void prv_debugging_window_load(Window *window) {
                              .draw_row = prv_debugging_draw_row_callback,
                              .select_click = prv_debugging_select_callback,
                            });
+  menu_layer_set_normal_colors(menu_layer, system_theme_get_bg_color(),
+                               system_theme_get_fg_color());
   GColor highlight_bg = shell_prefs_get_theme_highlight_color();
   menu_layer_set_highlight_colors(menu_layer, highlight_bg, gcolor_legible_over(highlight_bg));
   menu_layer_set_click_config_onto_window(menu_layer, &data->window);
@@ -783,7 +790,8 @@ static void prv_draw_fcc_cell_round(GContext *ctx, const GRect *cell_layer_bound
   const uint8_t fcc_number_subtitle_height = fonts_get_font_height(fcc_number_subtitle_font);
   const GTextOverflowMode text_overflow_mode = GTextOverflowModeFill;
 
-  graphics_context_set_text_color(ctx, cell_is_highlighted ? GColorWhite : GColorBlack);
+  graphics_context_set_text_color(ctx,
+                                  cell_is_highlighted ? GColorWhite : system_theme_get_fg_color());
 
   // Calculate the container of the FCC cell content and center it within the cell
   const int16_t title_and_icon_width = 50;
@@ -1139,6 +1147,8 @@ static void prv_certification_window_load(Window *window) {
                              .draw_row = prv_certification_draw_row_callback,
                              .select_click = prv_certification_select_callback,
                            });
+  menu_layer_set_normal_colors(menu_layer, system_theme_get_bg_color(),
+                               system_theme_get_fg_color());
   GColor highlight_bg = shell_prefs_get_theme_highlight_color();
   menu_layer_set_highlight_colors(menu_layer, highlight_bg, gcolor_legible_over(highlight_bg));
   menu_layer_set_click_config_onto_window(menu_layer, &data->window);
@@ -1217,15 +1227,15 @@ static void prv_kcc_window_load(Window *window) {
   title_text_frame.origin.y =
       bmp_frame.origin.y + bmp_size.h + vertical_spacing - title_text_internal_padding;
   text_layer_init_with_parameters(&data->title_text, &title_text_frame, title, title_text_font,
-                                  GColorBlack, GColorClear, GTextAlignmentCenter,
+                                  system_theme_get_fg_color(), GColorClear, GTextAlignmentCenter,
                                   GTextOverflowModeTrailingEllipsis);
   layer_add_child(window_layer, text_layer_get_layer(&data->title_text));
 
   GRect info_text_frame = (GRect){.size = info_text_size};
   info_text_frame.origin.y = title_text_frame.origin.y + title_text_size.h + vertical_spacing;
   text_layer_init_with_parameters(&data->info_text, &info_text_frame, prv_get_korea_kcc_id(),
-                                  info_text_font, GColorBlack, GColorClear, GTextAlignmentCenter,
-                                  GTextOverflowModeTrailingEllipsis);
+                                  info_text_font, system_theme_get_fg_color(), GColorClear,
+                                  GTextAlignmentCenter, GTextOverflowModeTrailingEllipsis);
   layer_add_child(window_layer, text_layer_get_layer(&data->info_text));
 }
 
