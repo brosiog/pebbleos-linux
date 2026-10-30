@@ -193,6 +193,7 @@ void quick_launch_app_menu_window_push(ButtonId button, bool is_tap,
     .icons_enabled = true,
   };
   option_menu_configure(option_menu, &config);
+  settings_option_menu_apply_theme(option_menu);
   option_menu_set_callbacks(option_menu,
                             &(OptionMenuCallbacks){
                               .select = prv_menu_select,

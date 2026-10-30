@@ -19,6 +19,7 @@
 #include <kernel/pbl_malloc.h>
 #include <process_state/app_state/app_state.h>
 #include <shell/prefs.h>
+#include <shell/system_theme.h>
 
 typedef struct SettingsData {
   Window window;
@@ -43,11 +44,23 @@ typedef struct SettingsData {
   EventServiceInfo pref_change_event_info; //!< Subscription for pref change notifications
 } SettingsData;
 
+static void prv_apply_theme(SettingsData *data) {
+  const GColor bg = system_theme_get_bg_color();
+  const GColor fg = system_theme_get_fg_color();
+  window_set_background_color(&data->window, bg);
+  status_bar_layer_set_colors(&data->status_layer, bg, fg);
+  menu_layer_set_normal_colors(&data->menu_layer, bg, fg);
+  const GColor highlight_bg = shell_prefs_get_theme_highlight_color();
+  menu_layer_set_highlight_colors(&data->menu_layer, highlight_bg,
+                                  gcolor_legible_over(highlight_bg));
+}
+
 // Pref change handler
 ///////////////////////
 
 static void prv_pref_change_handler(PebbleEvent *event, void *context) {
   SettingsData *data = context;
+  prv_apply_theme(data);
   // Reload the menu when any pref changes: cell heights are cached by the menu
   // layer and can change with the preferred content size. Re-anchor the
   // selection afterwards so the scroll offset stays within the new geometry.
@@ -73,8 +86,8 @@ static void prv_set_sub_menu_colors(GContext *ctx, const Layer *cell_layer, bool
     graphics_context_set_fill_color(ctx, highlight_bg);
     graphics_context_set_text_color(ctx, gcolor_legible_over(highlight_bg));
   } else {
-    graphics_context_set_fill_color(ctx, GColorWhite);
-    graphics_context_set_text_color(ctx, GColorBlack);
+    graphics_context_set_fill_color(ctx, system_theme_get_bg_color());
+    graphics_context_set_text_color(ctx, system_theme_get_fg_color());
   }
   graphics_fill_rect(ctx, &cell_layer->bounds);
 }
@@ -170,7 +183,6 @@ static void prv_settings_window_load(Window *window) {
   const char *title = data->title_override ? data->title_override
                                            : settings_menu_get_status_name(data->current_category);
   status_bar_layer_set_title(status_layer, i18n_get(title, data), false, false);
-  status_bar_layer_set_colors(status_layer, GColorWhite, GColorBlack);
   status_bar_layer_set_separator_mode(status_layer, OPTION_MENU_STATUS_SEPARATOR_MODE);
   layer_add_child(&data->window.layer, status_bar_layer_get_layer(status_layer));
 
@@ -192,9 +204,7 @@ static void prv_settings_window_load(Window *window) {
                              .selection_changed = prv_selection_changed_callback,
                              .selection_will_change = prv_selection_will_change_callback,
                            });
-  menu_layer_set_normal_colors(menu_layer, GColorWhite, GColorBlack);
-  GColor highlight_bg = shell_prefs_get_theme_highlight_color();
-  menu_layer_set_highlight_colors(menu_layer, highlight_bg, gcolor_legible_over(highlight_bg));
+  prv_apply_theme(data);
   menu_layer_set_click_config_onto_window(menu_layer, &data->window);
   menu_layer_set_scroll_wrap_around(menu_layer, shell_prefs_get_menu_scroll_wrap_around_enable());
   menu_layer_set_scroll_vibe_on_wrap(

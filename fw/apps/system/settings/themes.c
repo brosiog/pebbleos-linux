@@ -5,15 +5,20 @@
 
 #include "menu.h"
 #include "option_menu.h"
+#include "window.h"
 
+#include <pbl/kernel/assert.h>
 #include <pbl/kernel/fatal.h>
 #include <pbl/logging/logging.h>
 #include <pbl/services/i18n/i18n.h>
+#include <pbl/util/math.h>
 #include <pbl/util/size.h>
 
 #include <applib/graphics/gtypes.h>
+#include <applib/ui/app_window_stack.h>
 #include <applib/ui/dialogs/expandable_dialog.h>
 #include <applib/ui/menu_layer.h>
+#include <kernel/pbl_malloc.h>
 #include <shell/prefs.h>
 
 #ifdef CONFIG_THEMING
@@ -128,21 +133,92 @@ static OptionMenu *prv_push_color_menu(void) {
 
   return option_menu;
 }
-#endif // CONFIG_THEMING
 
-static Window *prv_create_color_menu(void) {
-#ifdef CONFIG_THEMING
-  OptionMenu *option_menu = prv_push_color_menu();
-  return option_menu ? &option_menu->window : nullptr;
-#else
-  pbl_panic();
-  return nullptr;
-#endif
+/////////////////////////////
+// Themes Menu
+/////////////////////////////
+
+typedef enum ThemesMenuIndex {
+  ThemesMenuIndex_DarkMode,
+  ThemesMenuIndex_AccentColor,
+
+  ThemesMenuIndexCount,
+} ThemesMenuIndex;
+
+typedef struct SettingsThemesData {
+  SettingsCallbacks callbacks;
+} SettingsThemesData;
+
+static void prv_deinit_cb(SettingsCallbacks *context) {
+  i18n_free_all(context);
+  app_free(context);
+}
+
+static uint16_t prv_num_rows_cb(SettingsCallbacks *context) {
+  return ThemesMenuIndexCount;
+}
+
+static void prv_draw_row_cb(SettingsCallbacks *context, GContext *ctx, const Layer *cell_layer,
+                            uint16_t row, bool selected) {
+  const char *title = nullptr;
+  const char *subtitle = nullptr;
+  switch ((ThemesMenuIndex)row) {
+    case ThemesMenuIndex_DarkMode:
+      /// Title of the Dark Mode toggle in Themes Settings.
+      title = i18n_noop("Dark Mode");
+      subtitle = shell_prefs_get_theme_dark_mode() ? i18n_noop("On") : i18n_noop("Off");
+      break;
+    case ThemesMenuIndex_AccentColor: {
+      title = i18n_noop("Accent Color");
+      const int index = prv_color_to_index(shell_prefs_get_theme_highlight_color(),
+                                           DEFAULT_THEME_HIGHLIGHT_COLOR);
+      subtitle = s_color_definitions[MAX(index, 0)].name;
+      break;
+    }
+    case ThemesMenuIndexCount:
+      break;
+  }
+  PBL_ASSERTN(title);
+  menu_cell_basic_draw(ctx, cell_layer, i18n_get(title, context), i18n_get(subtitle, context),
+                       nullptr);
+}
+
+static void prv_select_click_cb(SettingsCallbacks *context, uint16_t row) {
+  switch ((ThemesMenuIndex)row) {
+    case ThemesMenuIndex_DarkMode:
+      shell_prefs_set_theme_dark_mode(!shell_prefs_get_theme_dark_mode());
+      break;
+    case ThemesMenuIndex_AccentColor: {
+      OptionMenu *option_menu = prv_push_color_menu();
+      if (option_menu) {
+        app_window_stack_push(&option_menu->window, true /* animated */);
+      }
+      break;
+    }
+    case ThemesMenuIndexCount:
+      break;
+  }
+  settings_menu_reload_data(SettingsMenuItemThemes);
 }
 
 static Window *prv_init(void) {
-  return prv_create_color_menu();
+  SettingsThemesData *data = app_malloc_check(sizeof(*data));
+  *data = (SettingsThemesData){
+    .callbacks = {
+      .deinit = prv_deinit_cb,
+      .draw_row = prv_draw_row_cb,
+      .select_click = prv_select_click_cb,
+      .num_rows = prv_num_rows_cb,
+    },
+  };
+  return settings_window_create(SettingsMenuItemThemes, &data->callbacks);
 }
+#else
+static Window *prv_init(void) {
+  pbl_panic();
+  return nullptr;
+}
+#endif // CONFIG_THEMING
 
 const SettingsModuleMetadata *settings_themes_get_info(void) {
   static const SettingsModuleMetadata s_module_info = {
