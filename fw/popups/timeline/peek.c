@@ -20,6 +20,7 @@
 #include <popups/system_obstruction.h>
 #include <process_management/app_manager.h>
 #include <shell/prefs.h>
+#include <shell/system_theme.h>
 
 #define TIMELINE_PEEK_FRAME_HIDDEN         GRect(0, DISP_ROWS, DISP_COLS, TIMELINE_PEEK_HEIGHT)
 #define TIMELINE_PEEK_OUTER_BORDER_WIDTH   PBL_IF_RECT_ELSE(2, 1)
@@ -47,7 +48,7 @@ static void prv_draw_background(GContext *ctx, const GRect *frame_orig,
   // Fill all the way to the bottom of the screen
   frame.size.h = DISP_ROWS - frame.origin.y;
 #endif
-  const GColor background_color = GColorWhite;
+  const GColor background_color = system_theme_get_bg_color();
   graphics_context_set_fill_color(ctx, background_color);
   graphics_fill_rect(ctx, &frame);
 
@@ -59,7 +60,7 @@ static void prv_draw_background(GContext *ctx, const GRect *frame_orig,
 
   // Draw the top border and concurrent event indicators
   frame = *frame_orig;
-  const GColor border_color = GColorBlack;
+  const GColor border_color = system_theme_get_fg_color();
   for (unsigned int i = 0; i <= num_concurrent; i++) {
     const bool has_content = (i < num_concurrent);
     for (unsigned int type = 0; type < (has_content ? 2 : 1); type++) {

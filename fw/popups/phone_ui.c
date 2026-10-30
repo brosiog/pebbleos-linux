@@ -63,7 +63,8 @@
 #define NAME_BUFFER_LENGTH        32
 #define CALL_STATUS_BUFFER_LENGTH 32
 
-#define DEFAULT_COLOR PBL_IF_COLOR_ELSE(GColorLightGray, GColorWhite)
+#define DEFAULT_COLOR \
+  PBL_IF_COLOR_ELSE(system_theme_color(GColorLightGray, GColorBlack), GColorWhite)
 #define ACCEPT_COLOR  PBL_IF_COLOR_ELSE(GColorIslamicGreen, GColorWhite)
 #define DECLINE_COLOR PBL_IF_COLOR_ELSE(GColorRed, GColorWhite)
 
@@ -1017,20 +1018,23 @@ static void prv_phone_ui_init(void) {
                   &GRect(0, 0, window->layer.bounds.size.w - PBL_IF_RECT_ELSE(ACTION_BAR_WIDTH, 0),
                          STATUS_BAR_LAYER_HEIGHT));
   status_bar_layer_set_colors(&s_phone_ui_data->status_bar,
-                              PBL_IF_COLOR_ELSE(GColorClear, GColorWhite), GColorBlack);
+                              PBL_IF_COLOR_ELSE(GColorClear, GColorWhite),
+                              system_theme_get_fg_color());
   layer_add_child(&s_phone_ui_data->core_ui_container, &s_phone_ui_data->status_bar.layer);
 
   // Icon
   kino_layer_init(&s_phone_ui_data->icon_layer,
                   &(GRect){style->icon_pos, {ICON_WIDTH, ICON_WIDTH}});
   kino_layer_set_alignment(&s_phone_ui_data->icon_layer, GAlignCenter);
+  kino_layer_set_draw_command_processor(&s_phone_ui_data->icon_layer,
+                                        system_theme_get_icon_processor());
   layer_add_child(&s_phone_ui_data->core_ui_container, &s_phone_ui_data->icon_layer.layer);
 
   // Caller ID text
   const GRect caller_id_text_rect =
       GRect(TEXT_MARGIN_WIDTH, style->caller_id_pos_y, width, style->caller_id_height);
   text_layer_init_with_parameters(&s_phone_ui_data->caller_id_text_layer, &caller_id_text_rect,
-                                  nullptr, nullptr, GColorBlack,
+                                  nullptr, nullptr, system_theme_get_fg_color(),
                                   PBL_IF_COLOR_ELSE(GColorClear, GColorWhite),
                                   PBL_IF_RECT_ELSE(GTextAlignmentCenter, GTextAlignmentRight),
                                   GTextOverflowModeTrailingEllipsis);
@@ -1043,7 +1047,8 @@ static void prv_phone_ui_init(void) {
   const GRect call_status_text_rect =
       GRect(TEXT_MARGIN_WIDTH, style->status_pos_y, width, style->status_height);
   text_layer_init_with_parameters(&s_phone_ui_data->call_status_text_layer, &call_status_text_rect,
-                                  nullptr, s_phone_ui_data->status_font, GColorBlack,
+                                  nullptr, s_phone_ui_data->status_font,
+                                  system_theme_get_fg_color(),
                                   PBL_IF_COLOR_ELSE(GColorClear, GColorWhite),
                                   PBL_IF_RECT_ELSE(GTextAlignmentCenter, GTextAlignmentRight),
                                   GTextOverflowModeTrailingEllipsis);
