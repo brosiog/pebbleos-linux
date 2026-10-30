@@ -292,7 +292,7 @@ static void prv_image_node_callback(GContext *ctx, const GRect *box,
       // Still transferring: fill the reserved area so the card doesn't look broken. Once the phone
       // answers NoImage this stops and the space is simply blank.
       const GRect placeholder = {origin, image};
-      graphics_context_set_fill_color(ctx, GColorLightGray);
+      graphics_context_set_fill_color(ctx, system_theme_color(GColorLightGray, GColorDarkGray));
       graphics_fill_round_rect(ctx, &placeholder, NOTIFICATION_IMAGE_CORNER_RADIUS, GCornersAll);
     }
     notification_image_unlock();
@@ -624,7 +624,7 @@ static PBL_NOINLINE void prv_card_render_internal(NotificationLayout *layout, GC
     .text_flow = PBL_IF_ROUND_ELSE(true, false),
     .paging = PBL_IF_ROUND_ELSE(true, false),
   };
-  graphics_context_set_text_color(ctx, GColorBlack);
+  graphics_context_set_text_color(ctx, system_theme_get_fg_color());
   (text_visible ? graphics_text_node_draw : graphics_text_node_get_size)(
       layout->view_node, ctx, &box, &config, &layout->view_size);
 

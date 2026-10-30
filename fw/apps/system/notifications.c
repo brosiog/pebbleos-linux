@@ -307,11 +307,12 @@ static void prv_group_window_select(MenuLayer *menu_layer, MenuIndex *cell_index
 
 static void prv_group_window_load(Window *window) {
   NotificationGroupWindow *group_window = window_get_user_data(window);
+  window_set_background_color(window, system_theme_get_bg_color());
   GRect sender_frame = window->layer.bounds;
   sender_frame.size.h = MENU_CELL_BASIC_HEADER_HEIGHT;
   text_layer_init_with_parameters(&group_window->sender_layer, &sender_frame, group_window->sender,
-                                  fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GColorBlack,
-                                  GColorWhite,
+                                  fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD),
+                                  system_theme_get_fg_color(), system_theme_get_bg_color(),
                                   PBL_IF_RECT_ELSE(GTextAlignmentLeft, GTextAlignmentCenter),
                                   GTextOverflowModeTrailingEllipsis);
 
@@ -327,7 +328,8 @@ static void prv_group_window_load(Window *window) {
                              .draw_row = prv_group_window_draw_row,
                              .select_click = prv_group_window_select,
                            });
-  menu_layer_set_normal_colors(menu_layer, GColorWhite, GColorBlack);
+  menu_layer_set_normal_colors(menu_layer, system_theme_get_bg_color(),
+                               system_theme_get_fg_color());
   menu_layer_set_highlight_colors(
       menu_layer, PBL_IF_COLOR_ELSE(DEFAULT_NOTIFICATION_COLOR, GColorBlack), GColorWhite);
   menu_layer_set_click_config_onto_window(menu_layer, window);
@@ -977,7 +979,8 @@ static void prv_window_load(Window *window) {
                              .select_click = prv_select_callback,
                            });
 
-  menu_layer_set_normal_colors(menu_layer, GColorWhite, GColorBlack);
+  menu_layer_set_normal_colors(menu_layer, system_theme_get_bg_color(),
+                               system_theme_get_fg_color());
   menu_layer_set_highlight_colors(
       menu_layer, PBL_IF_COLOR_ELSE(DEFAULT_NOTIFICATION_COLOR, GColorBlack), GColorWhite);
 
@@ -997,13 +1000,13 @@ static void prv_window_load(Window *window) {
       text_layer,
       &GRect(horizontal_margin, window->layer.bounds.size.h / 2 - 15,
              window->layer.bounds.size.w - horizontal_margin, window->layer.bounds.size.h / 2),
-      i18n_get("No notifications", data), font, GColorBlack, GColorWhite, GTextAlignmentCenter,
-      GTextOverflowModeTrailingEllipsis);
+      i18n_get("No notifications", data), font, system_theme_get_fg_color(),
+      system_theme_get_bg_color(), GTextAlignmentCenter, GTextOverflowModeTrailingEllipsis);
   layer_add_child(&window->layer, text_layer_get_layer(text_layer));
 
 #if PBL_ROUND
   GColor bg_color = GColorClear;
-  GColor fg_color = GColorBlack;
+  GColor fg_color = system_theme_get_fg_color();
 
   StatusBarLayer *status_bar = &data->status_bar_layer;
   status_bar_layer_init(status_bar);
@@ -1018,6 +1021,7 @@ static void prv_window_load(Window *window) {
 static void prv_push_window(NotificationsData *data) {
   Window *window = &data->window;
   window_init(window, WINDOW_NAME("Notifications"));
+  window_set_background_color(window, system_theme_get_bg_color());
   window_set_user_data(window, data);
   window_set_window_handlers(window, &(WindowHandlers){
                                        .load = prv_window_load,

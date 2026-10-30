@@ -64,6 +64,7 @@
 #include <process_management/process_manager.h>
 #include <process_state/app_state/app_state.h>
 #include <resource/resource_ids.auto.h>
+#include <shell/system_theme.h>
 
 PBL_LOG_MODULE_DECLARE(service_alerts, CONFIG_SERVICE_ALERTS_LOG_LEVEL);
 
@@ -1219,11 +1220,16 @@ static void prv_layout_did_appear_handler(SwapLayer *swap_layer, LayoutLayer *la
   kino_layer_play(&((NotificationLayout *)layout)->icon_layer);
 }
 
+// The action button sits over the notification body, so it follows the theme
+static void prv_action_button_update_proc(Layer *layer, GContext *ctx) {
+  action_button_draw(ctx, layer, system_theme_get_fg_color());
+}
+
 #if PBL_COLOR
 static void prv_update_colors_handler(SwapLayer *swap_layer, GColor bg_color,
                                       bool status_bar_filled, void *context) {
   NotificationWindowData *data = context;
-  GColor status_color = (status_bar_filled) ? bg_color : GColorWhite;
+  GColor status_color = (status_bar_filled) ? bg_color : system_theme_get_bg_color();
   // Status bar is clear on round, because the banner is rendered under it
   status_bar_layer_set_colors(&data->status_layer, PBL_IF_ROUND_ELSE(GColorClear, status_color),
                               gcolor_legible_over(status_color));
@@ -1334,6 +1340,7 @@ static void prv_init_notification_window(bool is_modal, bool allow_dismiss_all) 
 
   Window *window = &data->window;
   window_init(window, "Notification Window");
+  window_set_background_color(window, system_theme_get_bg_color());
   window_set_window_handlers(window, &(WindowHandlers){
                                        .appear = prv_window_appear,
                                        .disappear = prv_window_disappear,
@@ -1358,7 +1365,7 @@ static void prv_init_notification_window(bool is_modal, bool allow_dismiss_all) 
   StatusBarLayer *status_layer = &data->status_layer;
   status_bar_layer_init(status_layer);
   status_bar_layer_set_colors(status_layer, PBL_IF_RECT_ELSE(GColorBlack, GColorClear),
-                              PBL_IF_RECT_ELSE(GColorWhite, GColorBlack));
+                              PBL_IF_RECT_ELSE(GColorWhite, system_theme_get_fg_color()));
   status_bar_layer_set_separator_mode(status_layer, StatusBarLayerSeparatorModeNone);
   status_bar_layer_set_mode(
       status_layer,
@@ -1390,7 +1397,7 @@ static void prv_init_notification_window(bool is_modal, bool allow_dismiss_all) 
 
   // bubble on right for action button
   layer_init(&data->action_button_layer, &data->window.layer.bounds);
-  data->action_button_layer.update_proc = action_button_update_proc;
+  data->action_button_layer.update_proc = prv_action_button_update_proc;
   layer_add_child(root_layer, &data->action_button_layer);
 #ifdef CONFIG_TOUCH
   layer_set_contains_point_override(&data->action_button_layer,
