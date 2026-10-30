@@ -351,6 +351,9 @@ static uint8_t s_ambient_clock_mode = AmbientClockMode_Off;
 #define PREF_KEY_THEME_HIGHLIGHT_COLOR "themeHighlightColor"
 
 static GColor s_theme_highlight_color = GColorVividCerulean;
+
+#define PREF_KEY_THEME_DARK_MODE "themeDarkMode"
+static bool s_theme_dark_mode = false;
 #endif
 
 #define PREF_KEY_MENU_SCROLL_WRAP_AROUND    "menuScrollWrapAround"
@@ -973,6 +976,11 @@ static bool prv_set_s_theme_highlight_color(GColor *color) {
     return false; // Reject invalid value
   }
   s_theme_highlight_color = *color;
+  return true;
+}
+
+static bool prv_set_s_theme_dark_mode(bool *enabled) {
+  s_theme_dark_mode = *enabled;
   return true;
 }
 #endif
@@ -2395,6 +2403,30 @@ GColor shell_prefs_get_theme_highlight_color(void) {
 void shell_prefs_set_theme_highlight_color(GColor color) {
 #ifdef CONFIG_THEMING
   prv_pref_set(PREF_KEY_THEME_HIGHLIGHT_COLOR, &color, sizeof(GColor));
+#endif
+}
+
+bool shell_prefs_get_theme_dark_mode(void) {
+#ifdef CONFIG_THEMING
+  return s_theme_dark_mode;
+#else
+  return false;
+#endif
+}
+
+void shell_prefs_set_theme_dark_mode(bool enabled) {
+#ifdef CONFIG_THEMING
+  prv_pref_set(PREF_KEY_THEME_DARK_MODE, &enabled, sizeof(enabled));
+
+  // Watch-side sets bypass the blob-db path; open windows repaint on this event.
+  PebbleEvent pref_event = {
+    .type = PEBBLE_PREF_CHANGE_EVENT,
+    .pref_change = {
+      .key = PREF_KEY_THEME_DARK_MODE,
+      .key_len = sizeof(PREF_KEY_THEME_DARK_MODE),
+    },
+  };
+  event_put(&pref_event);
 #endif
 }
 

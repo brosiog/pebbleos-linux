@@ -4,6 +4,8 @@
 #pragma once
 
 #include <applib/fonts/fonts.h>
+#include <applib/graphics/gdraw_command_list.h>
+#include <applib/graphics/gtypes.h>
 #include <applib/platform.h>
 #include <applib/preferred_content_size.h>
 
@@ -101,3 +103,31 @@ PreferredContentSize system_theme_get_default_content_size_for_runtime_platform(
 //! platform
 PreferredContentSize system_theme_convert_host_content_size_to_runtime_platform(
     PreferredContentSize size);
+
+//! @return True when the user chose dark mode, which draws system UI light-on-black. Always false
+//! on black and white displays and in recovery firmware.
+bool system_theme_is_dark(void);
+
+//! @return \p light normally, or \p dark in dark mode.
+GColor system_theme_color(GColor light, GColor dark);
+
+//! @return The background of system windows and lists: white, or black in dark mode.
+GColor system_theme_get_bg_color(void);
+
+//! @return Text and line art over \ref system_theme_get_bg_color: black, or white in dark mode.
+GColor system_theme_get_fg_color(void);
+
+//! @return Secondary text such as subtitles and timestamps: dark gray, or light gray in dark mode.
+GColor system_theme_get_secondary_fg_color(void);
+
+//! @return A draw command processor that swaps black with white and dark gray with light gray, for
+//! drawing light-theme line art icons in dark mode; nullptr when dark mode is off.
+GDrawCommandProcessor *system_theme_get_icon_processor(void);
+
+//! @return \p color with black and white, and dark and light gray, swapped in dark mode.
+GColor system_theme_invert_neutral(GColor color);
+
+//! In dark mode, inverts the lightness of the 8-bit \p bitmap within \p rect while keeping hues:
+//! white and black swap, grays mirror, pale tints become deep ones and saturated colors stay.
+//! Used for system apps whose custom drawing assumes a white background.
+void system_theme_dark_filter_bitmap(GBitmap *bitmap, const GRect *rect);
