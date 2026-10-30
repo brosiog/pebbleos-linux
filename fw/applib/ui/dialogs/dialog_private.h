@@ -28,6 +28,10 @@ void dialog_pop(Dialog *dialog);
 //! @param dialog Pointer to a \ref Dialog to load
 void dialog_load(Dialog *dialog);
 
+//! In dark mode, turns a neutral (light gray or white) dialog black with white text and light
+//! icons; colored dialogs are left alone. Call at the start of the dialog window's load.
+void dialog_apply_theme(Dialog *dialog);
+
 //! Displays the icon by playing the kino layer
 //! @param dialog Pointer to the \ref Dialog to appear
 void dialog_appear(Dialog *dialog);

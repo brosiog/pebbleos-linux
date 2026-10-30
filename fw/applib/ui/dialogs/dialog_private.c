@@ -14,6 +14,7 @@
 #include <applib/ui/window_stack.h>
 #include <process_state/app_state/app_state.h>
 #include <resource/resource_ids.auto.h>
+#include <shell/system_theme.h>
 
 static void prv_app_timer_callback(void *context) {
   Dialog *dialog = context;
@@ -32,6 +33,19 @@ void dialog_init(Dialog *dialog, const char *dialog_name) {
   dialog->icon_anim_direction = DialogIconAnimationFromRight;
   dialog->destroy_on_pop = true;
   dialog->text_color = GColorBlack;
+}
+
+void dialog_apply_theme(Dialog *dialog) {
+  if (!system_theme_is_dark()) {
+    return;
+  }
+  const GColor bg = dialog->window.background_color;
+  if (!gcolor_equal(bg, GColorLightGray) && !gcolor_equal(bg, GColorWhite)) {
+    return;
+  }
+  dialog->is_dark_themed = true;
+  window_set_background_color(&dialog->window, GColorBlack);
+  dialog->text_color = system_theme_invert_neutral(dialog->text_color);
 }
 
 void dialog_pop(Dialog *dialog) {
@@ -113,6 +127,9 @@ bool dialog_init_icon_layer(Dialog *dialog, KinoReel *image, GPoint icon_origin,
   KinoLayer *icon_layer = &dialog->icon_layer;
   kino_layer_init(icon_layer, &icon_rect);
   layer_set_clips(&icon_layer->layer, false);
+  if (dialog->is_dark_themed) {
+    kino_layer_set_draw_command_processor(icon_layer, system_theme_get_icon_processor());
+  }
 
   GRect from = icon_rect;
   // Animate from off screen

@@ -78,6 +78,9 @@ typedef struct Dialog {
   void *callback_context;
 
   bool destroy_on_pop;
+
+  // Set by dialog_apply_theme() when a neutral dialog is drawn in dark mode.
+  bool is_dark_themed;
 } Dialog;
 
 // If set to true, sets the dialog window to fullscreen.

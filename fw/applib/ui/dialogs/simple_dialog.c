@@ -93,6 +93,7 @@ static void prv_get_text_box(GSize frame_size, GSize icon_size, int icon_top_mar
 static void prv_simple_dialog_load(Window *window) {
   SimpleDialog *simple_dialog = window_get_user_data(window);
   Dialog *dialog = &simple_dialog->dialog;
+  dialog_apply_theme(dialog);
 
   // Ownership of icon is taken over by KinoLayer in dialog_init_icon_layer() call below
   KinoReel *icon = dialog_create_icon(dialog);
