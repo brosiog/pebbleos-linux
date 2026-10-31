@@ -66,6 +66,20 @@ button remains Select. Bezel Up/Down controls reverse, and touch coordinates and
 axes follow the display orientation. The preference survives restarts; choose **Off** to restore
 the original orientation. A button held during the change keeps its original action until released.
 
+## Dark mode
+
+Galaxy Watch3 builds include **Settings → Themes → Dark Mode**. It defaults to Off and persists
+across restarts. On draws neutral system backgrounds in pure black, with light text and icons.
+The accent color remains separately selectable under **Themes → Accent Color**.
+
+The launcher, settings, notifications, alarms, music, Timeline list, neutral dialogs and weather
+follow this setting. Colored notification headers and Timeline cards retain their colors.
+Watchfaces, album art and third-party apps retain their own appearance. The ambient clock is
+independent of this setting.
+
+See [dark-mode verification](linux_dark_mode.md) for simulator captures, tests and the limits of
+the host performance measurements.
+
 ## Tests
 
 ```sh

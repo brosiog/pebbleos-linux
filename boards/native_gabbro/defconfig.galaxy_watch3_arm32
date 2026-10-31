@@ -1,6 +1,8 @@
 # Galaxy Watch3 SM-R850: native PebbleOS with Linux hardware backends.
 CONFIG_LINUX_WATCH=y
 CONFIG_ORIENTATION_MANAGER=y
+# Themes: accent color and dark mode, which saves power on the OLED panel.
+CONFIG_THEMING=y
 CONFIG_DISPLAY_SDL=n
 CONFIG_DISPLAY_LINUX_FB=y
 CONFIG_BUTTON_SDL=n
