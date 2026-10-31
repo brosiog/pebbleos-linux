@@ -24,6 +24,7 @@
 #include <applib/graphics/gdraw_command_transforms.h>
 #include <applib/ui/app_window_stack.h>
 #include <applib/ui/vibes.h>
+#include <shell/system_theme.h>
 #include <uzlib.h>
 
 #define GLOBE_FRAME_INTERVAL_MS     35 // ~28.6 FPS, matching Pebble's shredder PDC cadence
@@ -474,7 +475,9 @@ static void draw_bw_frame(GContext *ctx, GlobeView *view, GPoint origin, GSize f
           view->bw_sequence, bw_frame_index_for_view(view, view->current_frame));
     }
     if (frame) {
-      gdraw_command_frame_draw(ctx, view->bw_sequence, frame, origin);
+      gdraw_command_frame_draw_processed(
+          ctx, view->bw_sequence, frame, origin,
+          view->is_revealing ? system_theme_get_icon_processor() : nullptr);
       return;
     }
   }
@@ -536,8 +539,8 @@ static bool draw_direct_crumple_command(GDrawCommand *command, uint32_t index, v
     return true;
 
   GDrawCommandType type = gdraw_command_get_type(command);
-  GColor fill_color = gdraw_command_get_fill_color(command);
-  GColor stroke_color = gdraw_command_get_stroke_color(command);
+  GColor fill_color = system_theme_invert_neutral(gdraw_command_get_fill_color(command));
+  GColor stroke_color = system_theme_invert_neutral(gdraw_command_get_stroke_color(command));
   uint8_t stroke_width = gdraw_command_get_stroke_width(command);
   uint32_t stroke_scale = ANIMATION_NORMALIZED_MAX - ((uint32_t)crumple->amount * 55 / 100);
   uint8_t scaled_stroke =
@@ -712,7 +715,8 @@ static void draw_intro_world_frame(GContext *ctx, GlobeView *view, GPoint origin
 static void draw_cradle(GContext *ctx, GlobeView *view, GPoint origin, GSize frame_size) {
   (void)frame_size;
   graphics_context_set_antialiased(ctx, false);
-  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_context_set_fill_color(ctx,
+                                  view->is_revealing ? system_theme_get_fg_color() : GColorBlack);
   const int acx = GLOBE_CRADLE_ARM_CENTER_X * GLOBE_CRADLE_SCALE_PCT / 100;
   const int acy = GLOBE_CRADLE_ARM_CENTER_Y * GLOBE_CRADLE_SCALE_PCT / 100;
   const int aor = GLOBE_CRADLE_ARM_OUTER_RADIUS * GLOBE_CRADLE_SCALE_PCT / 100;
@@ -722,7 +726,9 @@ static void draw_cradle(GContext *ctx, GlobeView *view, GPoint origin, GSize fra
                        GLOBE_CRADLE_ARM_END_ANGLE);
 
   if (view->cradle_pdc) {
-    gdraw_command_image_draw(ctx, view->cradle_pdc, origin);
+    gdraw_command_image_draw_processed(
+        ctx, view->cradle_pdc, origin,
+        view->is_revealing ? system_theme_get_icon_processor() : nullptr);
   }
   graphics_context_set_antialiased(ctx, true);
 }
@@ -2262,8 +2268,11 @@ static void show_intro_canvas(GlobeView *view) {
     return;
 
   if (view->window) {
-    window_set_background_color(view->window, GColorWhite);
-    window_set_dark_filter(view->window, true);
+    // The reveal mixes light line art with black space and a color globe. Theme its line art
+    // directly so the full-window filter cannot turn space white during the animation.
+    window_set_background_color(view->window,
+                                view->is_revealing ? system_theme_get_bg_color() : GColorWhite);
+    window_set_dark_filter(view->window, !view->is_revealing);
   }
   if (view->canvas_layer)
     layer_set_hidden(view->canvas_layer, false);
@@ -3060,7 +3069,7 @@ static void draw_transition_state(GContext *ctx, GlobeView *view, GPoint origin,
         origin.x - GLOBE_CRADLE_WIPE_MARGIN, origin.y + drop - GLOBE_CRADLE_WIPE_MARGIN,
         frame_size.w + (GLOBE_CRADLE_WIPE_MARGIN * 2), wipe_h + (GLOBE_CRADLE_WIPE_MARGIN * 2));
 
-    graphics_context_set_fill_color(ctx, GColorWhite);
+    graphics_context_set_fill_color(ctx, system_theme_get_bg_color());
     graphics_fill_rect(ctx, wipe_rect, 0, GCornerNone);
     if (view->reveal_direction > 0) {
       draw_forward_space_fade(ctx, wipe_rect, color_amount, view);
