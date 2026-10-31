@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
+#include "../../../drivers/mic/linux/mic_linux_bottom.h"
+
 #include <stdint.h>
 #include <string.h>
 
@@ -10,8 +12,6 @@
 #include <fake_kernel_malloc.h>
 #include <fake_mutex.h>
 #include <fake_system_task.h>
-
-#include "../../../drivers/mic/linux/mic_linux_bottom.h"
 
 static MicDeviceState s_state;
 static const struct MicDevice s_mic = {.state = &s_state, .channels = 1};
@@ -145,7 +145,8 @@ void test_mic_linux__frame_sizes_not_matching_chunks(void) {
   }
   fake_system_task_callbacks_invoke_pending();
   size_t total = 0;
-  for (int i = 0; i < 50; i++) total += 1 + i % 13;
+  for (int i = 0; i < 50; i++)
+    total += 1 + i % 13;
   cl_assert_equal_i(s_frames, total / 7);
   for (size_t i = 0; i < s_recorded_count; i++) {
     cl_assert_equal_i(s_recorded[i], (int16_t)(first + i));
@@ -162,7 +163,7 @@ void test_mic_linux__stale_generation_ignored(void) {
   mic_stop(MIC);
   cl_assert(mic_start(MIC, prv_handler, nullptr, s_frame, 320));
   cl_assert(s_open_generation != first);
-  prv_chunk(first, LINUX_MIC_CHUNK_SAMPLES);  // the old thread's last chunk
+  prv_chunk(first, LINUX_MIC_CHUNK_SAMPLES); // the old thread's last chunk
   fake_system_task_callbacks_invoke_pending();
   cl_assert_equal_i(s_frames, 0);
   prv_chunk(s_open_generation, LINUX_MIC_CHUNK_SAMPLES);

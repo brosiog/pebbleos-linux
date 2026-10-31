@@ -1,7 +1,7 @@
 /* SPDX-FileCopyrightText: 2026 Core Devices LLC */
 /* SPDX-License-Identifier: Apache-2.0 */
 
-#define _POSIX_C_SOURCE 200809L
+#define _POSIX_C_SOURCE  200809L
 #define CONFIG_SOC_POSIX 1
 
 #include <errno.h>

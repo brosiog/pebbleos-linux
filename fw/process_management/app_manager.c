@@ -991,8 +991,8 @@ static int prv_cmd_app_active(const struct pbl_shell *sh, size_t argc, char **ar
   pbl_shell_print(sh, "bank: %d", (uint8_t)process_metadata_get_res_bank_num(app_metadata));
   pbl_shell_print(sh, "install id: %" PRId32, app_manager_get_current_app_id());
 #ifdef CONFIG_LINUX_WATCH
-  pbl_shell_print(sh, "display interactive: %d frames: %" PRIu64,
-                  display_linux_is_interactive(), display_linux_frame_count());
+  pbl_shell_print(sh, "display interactive: %d frames: %" PRIu64, display_linux_is_interactive(),
+                  display_linux_frame_count());
 #endif
 #ifndef CONFIG_SHELL_SDK
   pbl_shell_print(sh, "default face: %" PRId32, watchface_get_default_install_id());

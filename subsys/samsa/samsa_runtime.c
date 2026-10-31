@@ -7,6 +7,7 @@
 #ifdef CONFIG_LINUX_WATCH
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <posix_host.h>
 #endif
 
@@ -661,8 +662,8 @@ static SamsaStop prv_handler(SamsaCpu *cpu, SamsaStop why, void *ctx) {
     prv_profile_dump(p, "init");
   }
   if (p->trace && p->last_sdk_end && started - p->last_sdk_end > 20000) {
-    fprintf(stderr, "APP_TRACE guest_gap us=%" PRIu64 " next=%s\n",
-            started - p->last_sdk_end, g_samsa_thunk_names[idx]);
+    fprintf(stderr, "APP_TRACE guest_gap us=%" PRIu64 " next=%s\n", started - p->last_sdk_end,
+            g_samsa_thunk_names[idx]);
   }
 #endif
   prv_sync_retained(p);
@@ -714,8 +715,8 @@ void samsa_call_guest(uint32_t fn, const uint32_t *args, unsigned nargs, uint32_
   if (p->profile) {
     uint64_t elapsed = posix_host_monotonic_us() - started;
     if (elapsed > 50000) {
-      fprintf(stderr, "APP_PROFILE callback=%" PRIx32 " us=%" PRIu64 " sdk_us=%" PRIu64 "\n",
-              fn, elapsed, p->profile_sdk_us - sdk_started);
+      fprintf(stderr, "APP_PROFILE callback=%" PRIx32 " us=%" PRIu64 " sdk_us=%" PRIu64 "\n", fn,
+              elapsed, p->profile_sdk_us - sdk_started);
       prv_profile_dump(p, "callback");
     }
   }

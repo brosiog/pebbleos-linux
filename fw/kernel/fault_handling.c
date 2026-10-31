@@ -246,9 +246,9 @@ PBL_SYSCALL_NORETURN(sys_app_fault, (VAL, uint32_t, stashed_lr)) {
 }
 
 #ifdef CONFIG_ARCH_POSIX
-#include <posix_host.h>
-
 #include "../../kernel/arch/posix/posix.h"
+
+#include <posix_host.h>
 
 // A native build gets SIGSEGV/SIGBUS/SIGILL instead of hardware faults. A fault
 // on the app or worker thread kills only that process, as an MPU fault would.

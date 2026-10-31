@@ -18,7 +18,7 @@
 PBL_LOG_MODULE_DEFINE(driver_mic_linux, CONFIG_DRIVER_MIC_LOG_LEVEL);
 
 // Half a second of audio absorbs system task stalls while the phone link is busy.
-#define CIRC_BUFFER_BYTES (MIC_SAMPLE_RATE * sizeof(int16_t) / 2)
+#define CIRC_BUFFER_BYTES                   (MIC_SAMPLE_RATE * sizeof(int16_t) / 2)
 #define MAX_FRAMES_PER_SYSTEM_TASK_CALLBACK 64
 
 // The device being captured, for the callbacks that carry no context.

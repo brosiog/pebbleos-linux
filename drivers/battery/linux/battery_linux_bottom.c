@@ -11,8 +11,8 @@
 #include <unistd.h>
 
 // Kernel power_supply uevents announce plug and level changes; polling is only a fallback.
-#define POLL_US          15000000ULL
-#define UEVENT_POLL_US   60000000ULL
+#define POLL_US        15000000ULL
+#define UEVENT_POLL_US 60000000ULL
 
 static pthread_mutex_t s_lock = PTHREAD_MUTEX_INITIALIZER;
 static struct linux_battery_sample s_sample = {.percent = -1};

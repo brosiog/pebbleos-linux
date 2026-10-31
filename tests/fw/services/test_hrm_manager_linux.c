@@ -29,9 +29,8 @@ void test_hrm_manager_linux__off_wrist_without_host_accel(void) {
 // The vendor service has no SpO2 path: such a subscriber must never try to enable the sensor.
 void test_hrm_manager_linux__spo2_never_enables_sensor(void) {
   s_activity_prefs_spo2_is_enabled = true;
-  HRMSessionRef session_ref =
-      sys_hrm_manager_app_subscribe(1 /*app_id*/, 1 /*interval_s*/, 0 /*expire_s*/,
-                                    HRMFeature_SpO2);
+  HRMSessionRef session_ref = sys_hrm_manager_app_subscribe(1 /*app_id*/, 1 /*interval_s*/,
+                                                            0 /*expire_s*/, HRMFeature_SpO2);
   fake_system_task_callbacks_invoke_pending();
   cl_assert_equal_b(hrm_is_enabled(HRM), false);
   cl_assert_equal_i(s_hrm_state.enable_count, 0);

@@ -1,5 +1,7 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
+#include "../../../drivers/imu/linux/watch_sensor_bottom.h"
+
 #include <stdint.h>
 #include <string.h>
 
@@ -11,8 +13,6 @@
 #include <fake_mutex.h>
 #include <fake_rtc.h>
 #include <fake_system_task.h>
-
-#include "../../../drivers/imu/linux/watch_sensor_bottom.h"
 
 extern const struct pbl_accel pbl_accel_linux;
 

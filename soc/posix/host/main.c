@@ -25,7 +25,8 @@ static void prv_notify(void) {
   }
 }
 #else
-static void prv_notify(void) {}
+static void prv_notify(void) {
+}
 #endif
 
 #if defined(__linux__) && (defined(__aarch64__) || defined(__arm__))
@@ -93,10 +94,9 @@ static void prv_fault(int signal_number, siginfo_t *info, void *context) {
   prv_fault_hex("lr=", 3, uc->uc_mcontext.arm_lr);
   prv_fault_hex("sp=", 3, uc->uc_mcontext.arm_sp);
   const unsigned long regs[] = {
-    uc->uc_mcontext.arm_r0, uc->uc_mcontext.arm_r1, uc->uc_mcontext.arm_r2,
-    uc->uc_mcontext.arm_r3, uc->uc_mcontext.arm_r4, uc->uc_mcontext.arm_r5,
-    uc->uc_mcontext.arm_r6, uc->uc_mcontext.arm_r7, uc->uc_mcontext.arm_r8,
-    uc->uc_mcontext.arm_r9, uc->uc_mcontext.arm_r10, uc->uc_mcontext.arm_fp,
+    uc->uc_mcontext.arm_r0, uc->uc_mcontext.arm_r1, uc->uc_mcontext.arm_r2,  uc->uc_mcontext.arm_r3,
+    uc->uc_mcontext.arm_r4, uc->uc_mcontext.arm_r5, uc->uc_mcontext.arm_r6,  uc->uc_mcontext.arm_r7,
+    uc->uc_mcontext.arm_r8, uc->uc_mcontext.arm_r9, uc->uc_mcontext.arm_r10, uc->uc_mcontext.arm_fp,
     uc->uc_mcontext.arm_ip,
   };
   for (unsigned i = 0; i < 13; ++i) {
@@ -274,7 +274,8 @@ static bool prv_wait(void) {
   pthread_mutex_unlock(&s_lock);
   (void)poll(descriptors, count, ready ? 0 : (int)timeout);
   char bytes[128];
-  while (read(s_wake_pipe[0], bytes, sizeof(bytes)) > 0) {}
+  while (read(s_wake_pipe[0], bytes, sizeof(bytes)) > 0) {
+  }
   pthread_mutex_lock(&s_lock);
   bool quit = s_quit;
   pthread_mutex_unlock(&s_lock);

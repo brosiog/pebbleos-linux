@@ -36,9 +36,7 @@ static void prv_report(const int16_t (*values)[3], unsigned count, uint64_t firs
     .num_samples = count,
     .stride = 6,
     .axis =
-        {{.offset = 0, .sign = rotate},
-         {.offset = 2, .sign = rotate},
-         {.offset = 4, .sign = 1}},
+        {{.offset = 0, .sign = rotate}, {.offset = 2, .sign = rotate}, {.offset = 4, .sign = 1}},
     .scale_num = 1,
     .scale_den = 1,
     .first_timestamp_us = first_epoch_us,
@@ -114,14 +112,12 @@ static void prv_deliver(void *data) {
   } else if (p->type == PBL_ADAPTER_SENSOR_HRM) {
     int bpm = p->values[0][0];
     int quality = p->values[0][1];
-    quality = quality < HRMQuality_OffWrist ? HRMQuality_OffWrist
-              : quality > HRMQuality_Excellent ? HRMQuality_Excellent : quality;
+    quality = quality < HRMQuality_OffWrist    ? HRMQuality_OffWrist
+              : quality > HRMQuality_Excellent ? HRMQuality_Excellent
+                                               : quality;
     static_assert(HRMQuality_OffWrist == -1 && HRMQuality_Worst == 0 &&
                   HRMQuality_Acceptable == 2 && HRMQuality_Good == 3 && HRMQuality_Excellent == 4);
-    HRMData hrm = {
-      .features = HRMFeature_BPM,
-      .hrm_quality = quality
-    };
+    HRMData hrm = {.features = HRMFeature_BPM, .hrm_quality = quality};
     if (bpm >= 25 && bpm <= 240 && hrm.hrm_quality > HRMQuality_Worst)
       hrm.hrm_bpm = bpm;
     hrm_manager_new_data_cb(&hrm);

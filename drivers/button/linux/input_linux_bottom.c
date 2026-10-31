@@ -255,7 +255,9 @@ static void prv_event(struct watch_input *input, const struct input_event *event
       prv_hold_awake(now);
       if (now >= s_wake_guard_until)
         fprintf(stderr, "evdev: wake %s event age %ldms\n",
-                input->touch ? "touch" : input->bezel ? "bezel" : "button",
+                input->touch   ? "touch"
+                : input->bezel ? "bezel"
+                               : "button",
                 prv_event_age_ms(event));
       s_wake_guard_until = now + WAKE_GUARD_US;
       linux_watch_user_wake();
@@ -414,5 +416,5 @@ static unsigned prv_poll_timeout_ms(void) {
   return 60000;
 }
 
-POSIX_HOST_HOOK(.init = prv_init, .poll = prv_poll, .exit = prv_exit,
-                .poll_fd = prv_poll_fd, .poll_timeout_ms = prv_poll_timeout_ms)
+POSIX_HOST_HOOK(.init = prv_init, .poll = prv_poll, .exit = prv_exit, .poll_fd = prv_poll_fd,
+                .poll_timeout_ms = prv_poll_timeout_ms)

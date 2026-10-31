@@ -11,8 +11,8 @@
 #include <pbl/kernel/assert.h>
 #include <pbl/services/clock.h>
 #include <pbl/services/light.h>
-#include <pbl/services/time.h>
 #include <pbl/services/system_task.h>
+#include <pbl/services/time.h>
 
 #include <board/board.h>
 #include <pbl_arch_posix.h>
@@ -147,6 +147,7 @@ void display_update_boot_frame(uint8_t *framebuffer) {
 #ifdef CONFIG_SHELL
 #include <errno.h>
 #include <stdlib.h>
+
 #include <pbl/shell/shell.h>
 static int prv_ambient_clock(const struct pbl_shell *sh, size_t argc, char **argv) {
   if (argc == 2) {

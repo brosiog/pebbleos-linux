@@ -91,8 +91,8 @@ static bool s_idle_reported;
 static void prv_idle_begin(uint64_t duration_us) {
   if (duration_us >= IDLE_REPORT_MIN_US) {
     // Anything beyond a day is "no timer".
-    linux_adapter_idle(false, duration_us > 86400ULL * 1000000ULL
-                                  ? 0 : pbl_adapter_boottime_us() + duration_us);
+    linux_adapter_idle(
+        false, duration_us > 86400ULL * 1000000ULL ? 0 : pbl_adapter_boottime_us() + duration_us);
     s_idle_reported = true;
   }
 }

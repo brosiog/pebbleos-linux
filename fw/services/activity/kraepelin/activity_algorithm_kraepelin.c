@@ -867,8 +867,7 @@ static bool prv_external_steps_active(time_t utc_sec) {
 }
 
 // ------------------------------------------------------------------------------------
-void activity_algorithm_handle_external_steps(uint16_t steps, uint32_t elapsed_ms,
-                                              time_t utc_sec) {
+void activity_algorithm_handle_external_steps(uint16_t steps, uint32_t elapsed_ms, time_t utc_sec) {
   if (!prv_lock()) {
     return;
   }

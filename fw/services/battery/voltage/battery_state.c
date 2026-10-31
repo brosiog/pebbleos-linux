@@ -289,7 +289,8 @@ BatteryChargeState battery_get_charge_state(void) {
   uint8_t charge_percent = (uint8_t)percent;
 #elif defined(CONFIG_BATTERY_LINUX)
   // Samsung's fuel gauge already accounts for the battery's usable reserve.
-  int32_t percent_normalized = MIN((int32_t)pbl_ratio32_to_percent(s_last_battery_state.percent), 100);
+  int32_t percent_normalized =
+      MIN((int32_t)pbl_ratio32_to_percent(s_last_battery_state.percent), 100);
   uint8_t charge_percent = (uint8_t)percent_normalized;
 #else
   int32_t percent = pbl_ratio32_to_percent(s_last_battery_state.percent);

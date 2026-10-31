@@ -623,7 +623,7 @@ void music_album_art_transfer_failed(uint8_t token) {
 bool music_album_art_is_current(void) {
   pbl_mutex_lock(&s_music_ctx.mutex, PBL_FOREVER);
   const bool is_current = s_music_ctx.album_art_response_received &&
-                         s_music_ctx.album_art_generation == s_music_ctx.now_playing_generation;
+                          s_music_ctx.album_art_generation == s_music_ctx.now_playing_generation;
   pbl_mutex_unlock(&s_music_ctx.mutex);
   return is_current;
 }

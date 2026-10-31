@@ -2,11 +2,12 @@
 #define _GNU_SOURCE
 #include "mic_linux_bottom.h"
 
-#include <dlfcn.h>
-#include <pthread.h>
 #include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#include <dlfcn.h>
+#include <pthread.h>
 
 // Tizen's PulseAudio server grants the recorder privilege to the supervised UI's root/User
 // context, so the firmware records directly with libpulse-simple, loaded only when needed.
@@ -16,8 +17,8 @@ typedef struct {
   uint8_t channels;
 } pa_spec;
 
-static void *(*s_new)(const char *, const char *, int, const char *, const char *,
-                      const pa_spec *, const void *, const void *, int *);
+static void *(*s_new)(const char *, const char *, int, const char *, const char *, const pa_spec *,
+                      const void *, const void *, int *);
 static int (*s_read)(void *, void *, size_t, int *);
 static void (*s_free)(void *);
 static const char *(*s_strerror)(int);
@@ -43,8 +44,8 @@ static void *prv_capture(void *arg) {
   uint32_t generation = (uint32_t)(uintptr_t)arg;
   const pa_spec spec = {.format = 3 /* PA_SAMPLE_S16LE */, .rate = 16000, .channels = 1};
   int error = 0;
-  void *stream = s_new(NULL, "pebble", 2 /* PA_STREAM_RECORD */, NULL, "voice", &spec, NULL,
-                       NULL, &error);
+  void *stream =
+      s_new(NULL, "pebble", 2 /* PA_STREAM_RECORD */, NULL, "voice", &spec, NULL, NULL, &error);
   if (!stream) {
     fprintf(stderr, "mic: open failed: %s\n", s_strerror(error));
     return NULL;

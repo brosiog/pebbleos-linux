@@ -654,7 +654,7 @@ GBitmap *graphics_capture_frame_buffer_format(GContext *ctx, GBitmapFormat forma
 
   GBitmap *result = nullptr;
   if (format == GBitmapFormat1Bit && (native->info.format == GBitmapFormat8Bit ||
-                                     native->info.format == GBitmapFormat8BitCircular)) {
+                                      native->info.format == GBitmapFormat8BitCircular)) {
     // Create a new blank gbitmap in the correct format.
     const GBitmap *native_framebuffer = graphics_context_get_bitmap(ctx);
 
