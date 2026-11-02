@@ -96,6 +96,10 @@ class PlaygroundDirective(SphinxDirective):
                 text="The playground is not part of this build of the documentation."
             )
             return [note]
+        # Only the HTML builder embeds the firmware and records its deps;
+        # other builders, e.g. linkcheck, have nothing to render here.
+        if self.env.app.builder.format != "html":
+            return []
         depth = self.env.docname.count("/")
         boards = self.config.pbl_playground_boards
         for path in self.env.pbl_playground_deps:
