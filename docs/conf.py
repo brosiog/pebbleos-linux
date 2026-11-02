@@ -164,6 +164,7 @@ linkcheck_ignore = [
     r"https?://reveng\.sourceforge\.net/.*",
     r"https://www\.itu\.int/rec/T-REC-X\.25-199610-I/en",
     r"https://www\.nordicsemi\.com/Products/.*",
+    r"https://www\.renesas\.com/.*",
     r"https://www\.st\.com/.*",
     # Served by a local server on the reader's machine
     r"http://localhost:8000/.*",
