@@ -159,10 +159,16 @@ kconfig_gh_link_revision = "main"
 # -- Options for the linkcheck builder ----------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-the-linkcheck-builder
 
-# Sites that are alive but block automated requests
 linkcheck_ignore = [
+    # Sites that are alive but block automated requests
     r"https?://reveng\.sourceforge\.net/.*",
-    r"https://https://www\.itu\.int/rec/T-REC-X\.25-199610-I/en",
+    r"https://www\.itu\.int/rec/T-REC-X\.25-199610-I/en",
+    r"https://www\.nordicsemi\.com/Products/.*",
+    r"https://www\.st\.com/.*",
+    # Served by a local server on the reader's machine
+    r"http://localhost:8000/.*",
+    # Doxygen output, built by Read the Docs, not by the linkcheck builder
+    r"(\.\./)+apidoc/.*",
 ]
 
 # -- Options for myst_parser extension -----------------------------------------

@@ -27,7 +27,7 @@ platform, which apps see as a 144 × 168 black and white display.
 - **Backlight**: PWM driven
 - **Accelerometer and gyroscope**: [ST LSM6DSO](https://www.st.com/en/mems-and-sensors/lsm6dso.html)
 - **Magnetometer**: [MEMSIC MMC5603NJ](https://www.memsic.com/magnetometer-2)
-- **Pressure**: [Bosch BMP390](https://www.bosch-sensortec.com/products/environmental-sensors/pressure-sensors/bmp390/) barometric pressure sensor
+- **Pressure**: [Bosch BMP390](https://www.bosch-sensortec.com/en/products/environmental-sensors/pressure-sensors/pressure-sensors-bmp390.html) barometric pressure sensor
 - **Ambient light**: [TI OPT3001](https://www.ti.com/product/OPT3001)
 - **Vibration**: [TI DRV2604](https://www.ti.com/product/DRV2604) haptic driver
 - **Microphone**: PDM, on the nRF52840 PDM interface
